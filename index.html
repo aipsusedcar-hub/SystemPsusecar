@@ -3488,7 +3488,8 @@ let endIso = "";
   let rawBookingRows = [];
   let rawDeliveryRows = [];
   let bookingDeliverySourceNotice = "";
-  const BOOKING_DELIVERY_CACHE_KEY = "ps_booking_delivery_snapshot_v1";
+  // Bump the cache key after source reconciliation so old partial booking snapshots are not reused.
+  const BOOKING_DELIVERY_CACHE_KEY = "ps_booking_delivery_snapshot_v2";
   const BOOKING_DELIVERY_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
   let isBookingDeliveryLoaded = false;
 
