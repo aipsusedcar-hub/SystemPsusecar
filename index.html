@@ -4004,7 +4004,7 @@ let endIso = "";
     if (clearCache) sessionStorage.removeItem(BOOKING_DELIVERY_CACHE_KEY);
   }
 
-  async function fetchBookingDeliveryData({ preserveRenderedData = false, force = false } = {}) {
+  async function refreshBookingDeliveryAfterImport_(){if(bookingDeliveryLoadPromise){try{await bookingDeliveryLoadPromise}catch(_){}}invalidateBookingDeliveryData({clearCache:true});await fetchBookingDeliveryData({force:true});return isBookingDeliveryLoaded} async function fetchBookingDeliveryData({ preserveRenderedData = false, force = false } = {}) {
     const token = sessionStorage.getItem("ps_auth_token") || "";
     if (bookingDeliveryLoadPromise) return bookingDeliveryLoadPromise;
     if (!force && isBookingDeliveryLoaded && rawBookingRows.length && rawDeliveryRows.length) {
@@ -8113,7 +8113,7 @@ let endIso = "";
           `✅ บันทึกสำเร็จ — ${month} Revision ${Number(confirmed.revision || 0)}` +
           ` • ${Number(confirmed.rows || total).toLocaleString()} รายการ`;
 
-        await loadCommissionCloseRevisions(month);
+        await loadCommissionCloseRevisions(month); const reportRefreshed=await refreshBookingDeliveryAfterImport_(); status.textContent += reportRefreshed?" • รีเฟรชรายงานจอง/ปล่อยแล้ว":" • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
         return;
       }
 
@@ -8126,7 +8126,7 @@ let endIso = "";
           `⚠ ไฟล์นี้เคยนำเข้าแล้วที่ ${month} Revision ${Number(duplicateExisting.revision || 0)} ` +
           `ระบบไม่สร้าง Revision ซ้ำ`;
 
-        await loadCommissionCloseRevisions(month);
+        await loadCommissionCloseRevisions(month); const reportRefreshed=await refreshBookingDeliveryAfterImport_(); status.textContent += reportRefreshed?" • รีเฟรชรายงานจอง/ปล่อยแล้ว":" • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
         return;
       }
 
@@ -9001,7 +9001,7 @@ let endIso = "";
       if (data.snapshotBackfilled) {
         status.className = "import-status ok";
         status.textContent = `✅ Snapshot ${data.snapshotDate || ""} ถูกบันทึกเพิ่มแล้ว โดยไม่สร้างรายการ Master ซ้ำ • สถานะชุดข้อมูล: ${data.snapshotComplete ? "ครบ" : "บางส่วน"}`;
-        await loadBookingDeliveryImportHistory();
+        await loadBookingDeliveryImportHistory(); const reportRefreshed=await refreshBookingDeliveryAfterImport_(); status.textContent += reportRefreshed?" • รีเฟรชรายงานจอง/ปล่อยแล้ว":" • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
         return;
       }
 
@@ -9025,7 +9025,7 @@ let endIso = "";
         ` • Master ${Number(s.masterCount || 0).toLocaleString()} รายการ` +
         ` • จองแล้วปล่อยจริง ${Number(s.releasedCount || 0).toLocaleString()} รายการ`;
 
-      await loadBookingDeliveryImportHistory();
+      await loadBookingDeliveryImportHistory(); const reportRefreshed=await refreshBookingDeliveryAfterImport_(); status.textContent += reportRefreshed?" • รีเฟรชรายงานจอง/ปล่อยแล้ว":" • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
       // ตั้งใจไม่เรียก fetchBookingDeliveryData() เพื่อไม่ให้แท็บ 🚗 ยอดปล่อย / จอง ถูกแตะหรือเปลี่ยนพฤติกรรม
     } catch (err) {
       console.error("Import booking/delivery V3 failed:", err);
