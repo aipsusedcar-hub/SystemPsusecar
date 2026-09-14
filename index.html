@@ -3074,8 +3074,7 @@ let endIso = "";
 
     // Prefer POST with text/plain to avoid CORS preflight with Apps Script.
     try {
-      const postRes = await fetch(
-        GAS_WEB_APP_URL,
+      const postRes = await fetch(LOGIN_AUTH_WEB_APP_URL,
         securityFetchOptions({
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -3106,7 +3105,7 @@ let endIso = "";
     });
 
     const legacyRes = await fetch(
-      `${GAS_WEB_APP_URL}?${params.toString()}`,
+      `${LOGIN_AUTH_WEB_APP_URL}?${params.toString()}`,
       securityFetchOptions({ method: "GET" })
     );
     return parseJsonResponseSafe(legacyRes);
