@@ -9026,7 +9026,7 @@ let endIso = "";
         ` • จองแล้วปล่อยจริง ${Number(s.releasedCount || 0).toLocaleString()} รายการ`;
 
       await loadBookingDeliveryImportHistory(); const reportRefreshed=await refreshBookingDeliveryAfterImport_(); status.textContent += reportRefreshed?" • รีเฟรชรายงานจอง/ปล่อยแล้ว":" • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
-      // ตั้งใจไม่เรียก fetchBookingDeliveryData() เพื่อไม่ให้แท็บ 🚗 ยอดปล่อย / จอง ถูกแตะหรือเปลี่ยนพฤติกรรม
+      // รีเฟรชข้อมูลรายงานหลังนำเข้าเสร็จแล้ว
     } catch (err) {
       console.error("Import booking/delivery V3 failed:", err);
       status.className = "import-status bad";
