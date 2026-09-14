@@ -2232,11 +2232,11 @@ function auditPopupFlow(step, data){
             <div class="bd-filter-lock-row">
               <div class="bd-booking-filter-lock" style="background:#1e293b; border:1px solid var(--border-color); border-radius:10px; padding:8px 10px; display:flex; align-items:center; gap:8px; flex-wrap:nowrap;">
                 <label style="font-size:12px; color:var(--text-muted); font-weight:700; white-space:nowrap; margin:0;">📝 ช่วงยอดจอง</label>
-                <select id="bookingPeriodMode" onchange="updateBookingPeriodControls(); renderBookingDeliveryTab();" style="min-width:125px; padding:7px 9px; font-weight:700; color:#38bdf8; background:#0f172a; border:1px solid var(--border-color); border-radius:7px;">
+                <select id="bookingPeriodMode" onchange="saveBookingDeliveryFilters_(); updateBookingPeriodControls(); renderBookingDeliveryTab();" style="min-width:125px; padding:7px 9px; font-weight:700; color:#38bdf8; background:#0f172a; border:1px solid var(--border-color); border-radius:7px;">
                   <option value="month" selected>ทั้งเดือน</option>
                   <option value="range">กำหนดช่วงวันที่</option>
                 </select>
-                <select id="bookingMonthSelect" onchange="renderBookingDeliveryTab()" style="min-width:165px; padding:7px 9px; font-weight:700; color:#38bdf8; background:#0f172a; border:1px solid var(--border-color); border-radius:7px;">
+                <select id="bookingMonthSelect" onchange="saveBookingDeliveryFilters_(); renderBookingDeliveryTab()" style="min-width:165px; padding:7px 9px; font-weight:700; color:#38bdf8; background:#0f172a; border:1px solid var(--border-color); border-radius:7px;">
                   <option value="">กำลังโหลดเดือน...</option>
                 </select>
                 <div id="bookingDateRangeControls" style="display:none; gap:6px; align-items:center; flex-wrap:nowrap;">
@@ -2249,13 +2249,13 @@ function auditPopupFlow(step, data){
 
               <div class="comm-select-container bd-commission-filter-lock" style="padding:8px 10px; display:flex; align-items:center; gap:10px; flex-wrap:nowrap;">
                 <label for="commissionMonthSelect" style="font-size:12px; color:var(--text-muted); font-weight:700; white-space:nowrap; margin:0;">🏷️ เดือนคอมยอดปล่อย</label>
-                <select id="commissionMonthSelect" onchange="renderBookingDeliveryTab()" style="width:102px; min-width:102px; max-width:102px; background:#0f172a; border:1px solid var(--border-color); color:#34d399; font-weight:700; cursor:pointer; outline:none; padding:7px 8px; border-radius:7px; box-sizing:border-box; margin-left:auto;">
+                <select id="commissionMonthSelect" onchange="saveBookingDeliveryFilters_(); renderBookingDeliveryTab()" style="width:102px; min-width:102px; max-width:102px; background:#0f172a; border:1px solid var(--border-color); color:#34d399; font-weight:700; cursor:pointer; outline:none; padding:7px 8px; border-radius:7px; box-sizing:border-box; margin-left:auto;">
                   <option value="">กำลังโหลดเดือนคอม...</option>
                 </select>
               </div>
               <div class="comm-select-container" style="padding:8px 10px; display:flex; align-items:center; gap:10px; flex-wrap:nowrap;">
                 <label for="bookingSourceMode" style="font-size:12px; color:var(--text-muted); font-weight:700; white-space:nowrap; margin:0;">แหล่งที่มา</label>
-                <select id="bookingSourceMode" onchange="renderBookingDeliveryTab()" style="min-width:135px; background:#0f172a; border:1px solid var(--border-color); color:#38bdf8; font-weight:700; cursor:pointer; outline:none; padding:7px 8px; border-radius:7px;">
+                <select id="bookingSourceMode" onchange="saveBookingDeliveryFilters_(); renderBookingDeliveryTab()" style="min-width:135px; background:#0f172a; border:1px solid var(--border-color); color:#38bdf8; font-weight:700; cursor:pointer; outline:none; padding:7px 8px; border-radius:7px;">
                   <option value="all">ทุกแหล่งที่มา</option>
                   <option value="company" selected>เพจบริษัท</option>
                 </select>
@@ -3074,7 +3074,8 @@ let endIso = "";
 
     // Prefer POST with text/plain to avoid CORS preflight with Apps Script.
     try {
-      const postRes = await fetch(LOGIN_AUTH_WEB_APP_URL,
+      const postRes = await fetch(
+        LOGIN_AUTH_WEB_APP_URL,
         securityFetchOptions({
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -3805,6 +3806,7 @@ let endIso = "";
       else startInput.value = endInput.value;
     }
     syncBookingDateRangeConstraints();
+    saveBookingDeliveryFilters_();
     renderBookingDeliveryTab();
   }
 
@@ -3839,6 +3841,7 @@ let endIso = "";
       dateInput.value = `${targetFirst.getFullYear()}-${String(targetFirst.getMonth() + 1).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
     }
 
+    saveBookingDeliveryFilters_();
     renderBookingDeliveryTab();
   }
 
@@ -3877,6 +3880,74 @@ let endIso = "";
     });
 
     select.value = previousValue && seen.has(previousValue) ? previousValue : values[0];
+  }
+
+  const BOOKING_DELIVERY_FILTERS_STORAGE_KEY = "ps_booking_delivery_filters_v1";
+
+  function saveBookingDeliveryFilters_() {
+    try {
+      const value = id => document.getElementById(id)?.value || "";
+      localStorage.setItem(BOOKING_DELIVERY_FILTERS_STORAGE_KEY, JSON.stringify({
+        mode: value("bookingPeriodMode"),
+        month: value("bookingMonthSelect"),
+        start: value("bookingStartDateSelect"),
+        end: value("bookingDateSelect"),
+        commissionMonth: value("commissionMonthSelect"),
+        source: value("bookingSourceMode")
+      }));
+    } catch (error) {
+      console.warn("Could not save booking/delivery filters:", error);
+    }
+  }
+
+  function restoreBookingDeliveryFilters_() {
+    let saved;
+    try {
+      saved = JSON.parse(localStorage.getItem(BOOKING_DELIVERY_FILTERS_STORAGE_KEY) || "null");
+    } catch (error) {
+      return false;
+    }
+    if (!saved || typeof saved !== "object") return false;
+
+    const mode = document.getElementById("bookingPeriodMode");
+    const month = document.getElementById("bookingMonthSelect");
+    const start = document.getElementById("bookingStartDateSelect");
+    const end = document.getElementById("bookingDateSelect");
+    const commission = document.getElementById("commissionMonthSelect");
+    const source = document.getElementById("bookingSourceMode");
+    const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+
+    if (mode && ["month", "range"].includes(saved.mode)) mode.value = saved.mode;
+    if (month && /^\d{4}-\d{2}$/.test(String(saved.month || ""))) {
+      if (![...month.options].some(option => option.value === saved.month)) {
+        const option = document.createElement("option");
+        option.value = saved.month;
+        option.textContent = formatThaiMonthLabel(saved.month);
+        month.appendChild(option);
+      }
+      month.value = saved.month;
+    }
+    if (start && validDate(saved.start)) start.value = saved.start;
+    if (end && validDate(saved.end)) end.value = saved.end;
+    if (commission && saved.commissionMonth) {
+      let match = [...commission.options].find(option => option.value === saved.commissionMonth);
+      if (!match) match = [...commission.options].find(option =>
+        commissionValueMatchesMonth_(option.value || option.textContent, saved.commissionMonth)
+      );
+      if (match) commission.value = match.value;
+      else if (/^\d{4}-\d{2}$/.test(saved.commissionMonth)) {
+        const option = document.createElement("option");
+        option.value = saved.commissionMonth;
+        option.textContent = formatThaiMonthLabel(saved.commissionMonth);
+        commission.appendChild(option);
+        commission.value = option.value;
+      }
+    }
+    if (source && ["all", "company"].includes(saved.source)) source.value = saved.source;
+
+    updateBookingPeriodControls();
+    syncBookingDateRangeConstraints();
+    return true;
   }
 
   function saveBookingDeliveryCache_() {
@@ -4017,7 +4088,8 @@ let endIso = "";
         saveBookingDeliveryCache_();
         setDefaultBookingPeriod();
         populateCommissionMonthDropdown();
-        syncBookingDeliveryFiltersToMainRange_({ render: false });
+        const restoredFilters = restoreBookingDeliveryFilters_();
+        if (!restoredFilters) syncBookingDeliveryFiltersToMainRange_({ render: false });
         renderBookingDeliveryTab();
       } catch (err) {
         console.error("Booking/Delivery Summary API load error:", err);
@@ -4280,6 +4352,7 @@ let endIso = "";
     mainEnd.value = popupEnd.value;
     updateBookingPeriodControls();
     syncBookingDateRangeConstraints();
+    saveBookingDeliveryFilters_();
     renderBookingDeliveryTab();
 
     // รีเฟรชข้อมูลใน Popup ทันที โดยใช้ผลคำนวณชุดเดียวกับตารางหลัก
@@ -4307,6 +4380,7 @@ let endIso = "";
     if (!popupSelect || !mainSelect) return;
 
     mainSelect.value = popupSelect.value;
+    saveBookingDeliveryFilters_();
     renderBookingDeliveryTab();
     openBookingDeliveryPopup();
   }
@@ -6099,6 +6173,7 @@ let endIso = "";
       }
     }
     if (sourceMode) sourceMode.value = "company";
+    saveBookingDeliveryFilters_();
     updateBookingPeriodControls();
     if (render && isBookingDeliveryLoaded) renderBookingDeliveryTab();
     return true;
@@ -6138,6 +6213,7 @@ let endIso = "";
       }
     }
 
+    saveBookingDeliveryFilters_();
     updateBookingPeriodControls();
     syncBookingDateRangeConstraints();
     if (render && isBookingDeliveryLoaded) renderBookingDeliveryTab();
@@ -6585,7 +6661,7 @@ let endIso = "";
         if (statusBar) statusBar.style.display = "none";
         filterSpan.style.display = "none";
 
-        syncBookingDeliveryFiltersToMainRange_({ render: false });
+        if (!restoreBookingDeliveryFilters_()) syncBookingDeliveryFiltersToMainRange_({ render: false });
         renderBookingDeliveryTab();
       } else if (tabId === "importBookingDeliveryTab") {
         document.querySelectorAll(".tab-btn")[5].classList.add("active");
@@ -6995,7 +7071,7 @@ let endIso = "";
     if (restoredBookingDeliverySnapshot) {
       setDefaultBookingPeriod();
       populateCommissionMonthDropdown();
-      syncBookingDeliveryFiltersToMainRange_({ render: false });
+      if (!restoreBookingDeliveryFilters_()) syncBookingDeliveryFiltersToMainRange_({ render: false });
       renderBookingDeliveryTab();
     }
     fetchBookingDeliveryData({ preserveRenderedData: restoredBookingDeliverySnapshot, force: true });
