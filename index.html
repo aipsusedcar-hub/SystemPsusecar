@@ -3035,8 +3035,8 @@ let endIso = "";
   // SECURITY NOTE: Sheet IDs / Apps Script URLs are public identifiers in client-side HTML.
   // Real access control must be enforced by Google sharing settings and Apps Script server-side checks.
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby95XQhi333pmAcPf9AE9HbjAnsQ37JTeuRhPo3aNMOZSGhecbWkB6ymg3XNG4luNmH_w/exec";
-  // Authentication runs on its own Apps Script deployment; keep it separate from data APIs.
-  const LOGIN_AUTH_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykEJyrzbibmwtVFhe0b3WLmhWZOoW0DbAGx-2Ywq7ekX2rRrV-mN8VaV_FuXXBipO_cQ/exec";
+  // Authentication and booking import share the same Apps Script deployment.
+  const LOGIN_AUTH_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwTCgDPlHgpytu9IHVEwgOnoqrosRfqroCf2PeI8MTtgRDNhhlrDoIYcFOuh9JhZg1C/exec";
   // 📥 Apps Script แยกสำหรับนำเข้า Excel จอง / ปล่อย
   const BOOKING_IMPORT_GAS_URL = "https://script.google.com/macros/s/AKfycbwTCgDPlHgpytu9IHVEwgOnoqrosRfqroCf2PeI8MTtgRDNhhlrDoIYcFOuh9JhZg1C/exec";
   
