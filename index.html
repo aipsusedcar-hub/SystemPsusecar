@@ -5021,7 +5021,7 @@ let endIso = "";
           return valG !== "" && valG !== "-" && valG !== "null" && valG !== "เบอร์โทร/ไอดีไลน์" && valG !== "ลำดับ";
         });
 
-        const targetCfg = CURRENT_CONFIGS.find(cfg => !cfg.isMain && cfg.name === b.name);
+        const targetCfg = CURRENT_CONFIGS.find(cfg => !cfg.isMain && (cfg.name === b.name || (b.name === "นครพนมพี่ต้น" && cfg.name === "นครพนมทีม C")));
         if (targetCfg && branchColIndex !== -1) {
           phoneCount = activeMainRows.filter(row => checkBranchMatch(row[branchColIndex], targetCfg)).length;
         }
@@ -5344,7 +5344,7 @@ let endIso = "";
           return valG !== "" && valG !== "-" && valG !== "null" && valG !== "เบอร์โทร/ไอดีไลน์" && valG !== "ลำดับ";
         });
 
-        const targetCfg = CURRENT_CONFIGS.find(cfg => !cfg.isMain && cfg.name === b.name);
+        const targetCfg = CURRENT_CONFIGS.find(cfg => !cfg.isMain && (cfg.name === b.name || (b.name === "นครพนมพี่ต้น" && cfg.name === "นครพนมทีม C")));
         if (targetCfg && branchColIndex !== -1) {
           phoneCount = activeMainRows.filter(row => checkBranchMatch(row[branchColIndex], targetCfg)).length;
         }
