@@ -3050,7 +3050,8 @@ let endIso = "";
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
   // 📥 Apps Script แยกสำหรับนำเข้า Excel จอง / ปล่อย
-  const BOOKING_IMPORT_GAS_URL = "https://script.google.com/macros/s/AKfycbztc_fppyr-W2PfaDerwH0yAoRBeLuhvIKOZSXR5vqLYEtJ2I4EjwaF9kF_riNWkaed/exec";
+  // ใช้ deployment เดียวกับ backend หลัก เพื่อให้ Supabase JWT ถูกตรวจสอบชุดเดียวกันทุกแท็บ
+  const BOOKING_IMPORT_GAS_URL = GAS_WEB_APP_URL;
   
   // 🚗 แหล่งข้อมูลชีท จอง / ปล่อย
   // 🚗 แท็บยอดปล่อย / จอง: ล้างแหล่งข้อมูลเดิมแล้ว รอกำหนดใหม่
@@ -5938,9 +5939,13 @@ let endIso = "";
   }
 
   async function fetchGidSheetList_(cfg) {
-    const url = cfg.isMain
-      ? `${GAS_WEB_APP_URL}?action=getMainSheets`
-      : `${GAS_WEB_APP_URL}?action=getBranchSheets&id=${encodeURIComponent(cfg.id)}`;
+    const token = sessionStorage.getItem("ps_auth_token") || "";
+    const params = new URLSearchParams({
+      action: cfg.isMain ? "getMainSheets" : "getBranchSheets",
+      token,
+      ...(cfg.isMain ? {} : { id: cfg.id })
+    });
+    const url = `${GAS_WEB_APP_URL}?${params.toString()}`;
 
     const data = await fetchGidJsonp_(url);
 
@@ -6573,7 +6578,8 @@ let endIso = "";
 
     if (!monthDb.mainGid) {
       try {
-        const resMain = await fetch(`${GAS_WEB_APP_URL}?action=getMainSheets`);
+        const gidToken = sessionStorage.getItem("ps_auth_token") || "";
+        const resMain = await fetch(`${GAS_WEB_APP_URL}?action=getMainSheets&token=${encodeURIComponent(gidToken)}`);
         const sheetsMain = await resMain.json();
         const foundMain = sheetsMain.find(s => keys.some(k => s.title.toLowerCase().includes(k.toLowerCase())));
         if (foundMain) monthDb.mainGid = foundMain.gid;
@@ -6583,7 +6589,7 @@ let endIso = "";
     for (let b of activeBranches) {
       if (!monthDb.branches[b.name]) {
         try {
-          const resBranch = await fetch(`${GAS_WEB_APP_URL}?action=getBranchSheets&id=${b.id}`);
+          const resBranch = await fetch(`${GAS_WEB_APP_URL}?action=getBranchSheets&id=${b.id}&token=${encodeURIComponent(gidToken)}`);
           const sheetsBranch = await resBranch.json();
           const foundBranch = sheetsBranch.find(s => keys.some(k => s.title.toLowerCase().includes(k.toLowerCase())));
           if (foundBranch) {
