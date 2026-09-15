@@ -6023,7 +6023,7 @@ let endIso = "";
 
           if (row.error) {
             statusSpan.innerHTML = `<span class="badge-mismatch" title="${escapeSecurityHtml(row.error)}">⚠ ตรวจสดไม่สำเร็จ</span>`;
-          } else if (row.found && hasUsableGid_(row.gid, cfg?.name || row.name)) {
+          } else if (row.found && row.gid) {
             statusSpan.innerHTML = `<span class="badge-match">✔ พบ: ${escapeSecurityHtml(row.title || targetLabel)}</span>`;
           } else {
             statusSpan.innerHTML = `<span class="badge-notfound">✖ ไม่พบ ${escapeSecurityHtml(targetLabel)}</span>`;
@@ -6049,7 +6049,7 @@ let endIso = "";
           return;
         }
 
-        if (row && row.found && hasUsableGid_(row.gid, cfg?.name || row.name)) {
+        if (row && row.found && row.gid) {
           const gid = String(row.gid).trim();
           input.value = gid;
           cfg.gid = gid;
@@ -6821,7 +6821,7 @@ let endIso = "";
       let statusColor = "var(--success)";
       let isError = false;
 
-      if (!hasUsableGid_(cfg.gid, cfg.name)) {
+      if (!cfg.gid) {
         statusText = "✖ ไม่มี GID";
         statusColor = "var(--danger)";
         isError = true;
@@ -6892,12 +6892,6 @@ let endIso = "";
     });
   }
 
-  function hasUsableGid_(gid, branchName) {
-    const value = String(gid ?? "").trim();
-    if (value === "") return false;
-    return value !== "0" || String(branchName || "").trim() === "มีนบุรี";
-  }
-
   function renderGidManagerTable() {
     buildGidManagerConfigs_();
     const tbody = document.getElementById("gidManagerTableBody");
@@ -6960,7 +6954,7 @@ let endIso = "";
             return;
           }
 
-          if (!row.found || !hasUsableGid_(row.gid, cfg?.name || row.name)) {
+          if (!row.found || !row.gid) {
             statusSpan.innerHTML = `<span class="badge-notfound">✖ ไม่พบ ${escapeSecurityHtml(targetLabel)}</span>`;
             return;
           }
@@ -6968,7 +6962,7 @@ let endIso = "";
           const actualGid = String(row.gid).trim();
           const currentGid = cleanText(input ? input.value : cfg.gid);
 
-          if (!hasUsableGid_(currentGid, cfg?.name)) {
+          if (!currentGid) {
             statusSpan.innerHTML = `<span class="badge-notfound">⚠ พบ ${escapeSecurityHtml(row.title || targetLabel)} แต่ยังไม่มี GID ในช่อง</span>`;
           } else if (currentGid === actualGid) {
             statusSpan.innerHTML = `<span class="badge-match">✔ ถูกต้อง: ${escapeSecurityHtml(row.title || targetLabel)}</span>`;
@@ -6993,7 +6987,7 @@ let endIso = "";
           return;
         }
 
-        if (!row.found || !hasUsableGid_(row.gid, cfg?.name || row.name)) {
+        if (!row.found || !row.gid) {
           statusSpan.innerHTML = `<span class="badge-notfound">✖ ไม่พบ ${escapeSecurityHtml(targetLabel)}</span>`;
           return;
         }
@@ -7003,7 +6997,7 @@ let endIso = "";
 
         if (currentGid === actualGid) {
           statusSpan.innerHTML = `<span class="badge-match">✔ ถูกต้อง: ${escapeSecurityHtml(row.title || targetLabel)}</span>`;
-        } else if (!hasUsableGid_(currentGid, cfg?.name)) {
+        } else if (!currentGid) {
           statusSpan.innerHTML = `<span class="badge-notfound">⚠ พบ ${escapeSecurityHtml(row.title || targetLabel)} แต่ยังไม่มี GID ในช่อง</span>`;
         } else {
           statusSpan.innerHTML = `<span class="badge-mismatch" title="GID ปัจจุบัน ${escapeSecurityHtml(currentGid)} / GID จริง ${escapeSecurityHtml(actualGid)}">⚠ GID เปลี่ยน → ${escapeSecurityHtml(actualGid)}</span>`;
@@ -7074,7 +7068,7 @@ let endIso = "";
     if (!selectedMonth) return false;
 
     buildCurrentConfigs();
-    const hasAllGids = CURRENT_CONFIGS.length > 0 && CURRENT_CONFIGS.every(cfg => !!hasUsableGid_(cfg.gid, cfg.name));
+    const hasAllGids = CURRENT_CONFIGS.length > 0 && CURRENT_CONFIGS.every(cfg => !!cfg.gid);
     if (hasAllGids) return true;
 
     const results = await fetchMonthlyGidsForManager_(selectedMonth);
@@ -7082,7 +7076,7 @@ let endIso = "";
     if (!MONTHLY_GID_DATABASE[selectedMonth].branches) MONTHLY_GID_DATABASE[selectedMonth].branches = {};
 
     results.forEach(row => {
-      if (!row || !row.found || !hasUsableGid_(row.gid, row.name)) return;
+      if (!row || !row.found || !row.gid) return;
       if (row.isMain) MONTHLY_GID_DATABASE[selectedMonth].mainGid = row.gid;
       else MONTHLY_GID_DATABASE[selectedMonth].branches[row.name] = row.gid;
     });
@@ -7151,7 +7145,7 @@ let endIso = "";
     updateProgress(35, `📂 เริ่มโหลดข้อมูลชีทรายสาขา (0/${totalBranches})...`);
 
     const branchPromises = branchList.map(async (cfg, idx) => {
-      if (!hasUsableGid_(cfg.gid, cfg.name)) {
+      if (!cfg.gid) {
         completedCount++;
         let currentPct = 35 + Math.round((completedCount / totalBranches) * 55);
         updateProgress(currentPct, `📂 กำลังโหลดข้อมูลสาขา (${completedCount}/${totalBranches}): ${cfg.name}`);
@@ -7364,7 +7358,7 @@ let endIso = "";
       const isMatch = centerCount === branchCount && centerCount > 0;
 
       let statusHtml = `<span class="badge-ok">ตรงกัน</span>`;
-      if (!hasUsableGid_(cfg.gid, cfg.name)) {
+      if (!cfg.gid) {
         statusHtml = `<span style="color:#64748b;">ไม่มี GID</span>`;
       } else if (centerCount === 0 && branchCount === 0) {
         statusHtml = `<span style="color:#64748b;">ไม่มีข้อมูล</span>`;
@@ -9139,6 +9133,7 @@ let endIso = "";
 
 </body>
 </html>
+
 
 
 
