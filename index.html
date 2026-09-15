@@ -5721,9 +5721,7 @@ let endIso = "";
     }
   };
 
-  let MONTHLY_GID_DATABASE = JSON.parse(localStorage.getItem("MONTHLY_GID_DATABASE")) || {
-    "sep69": defaultSeptGids
-  };
+    let MONTHLY_GID_DATABASE = JSON.parse(localStorage.getItem("MONTHLY_GID_DATABASE")) || { "sep69": defaultSeptGids }; (function migrateMonthlyGidCache_(){const signature=JSON.stringify({"มีนบุรี":BRANCH_IDS["มีนบุรี"]||""}),storageKey="MONTHLY_GID_SHEET_IDS_SIGNATURE",previous=localStorage.getItem(storageKey)||"";if(previous!==signature){Object.keys(MONTHLY_GID_DATABASE||{}).forEach(monthKey=>{const monthDb=MONTHLY_GID_DATABASE[monthKey];if(monthDb&&monthDb.branches)delete monthDb.branches["มีนบุรี"]});localStorage.setItem("MONTHLY_GID_DATABASE",JSON.stringify(MONTHLY_GID_DATABASE))}localStorage.setItem(storageKey,signature)})();
 
   let CURRENT_CONFIGS = [];
   let GID_MANAGER_CONFIGS = [];
@@ -5752,8 +5750,7 @@ let endIso = "";
     if (!selectedMonth) return;
     localStorage.setItem("gidManagerSelectedMonth", selectedMonth);
     gidOperationSeq++;
-    renderGidManagerTable();
-    const selectedOption = document.getElementById("gidManagerMonthSelect")?.selectedOptions[0];
+    renderGidManagerTable(); autoFetchGidsFromScript(); const selectedOption = document.getElementById("gidManagerMonthSelect")?.selectedOptions[0];
     updateProgress(100, `⚙️ โหมดจัดการ GID ประจำเดือน ${selectedOption?.text || ""}`);
   }
 
