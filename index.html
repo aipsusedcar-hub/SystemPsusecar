@@ -6892,7 +6892,13 @@ let endIso = "";
     });
   }
 
-  function hasUsableGid_(gid, branchName) {\n    const value = String(gid ?? "").trim();\n    if (value === "") return false;\n    return value !== "0" || String(branchName || "").trim() === "มีนบุรี";\n  }\n\n  function renderGidManagerTable() {
+  function hasUsableGid_(gid, branchName) {
+    const value = String(gid ?? "").trim();
+    if (value === "") return false;
+    return value !== "0" || String(branchName || "").trim() === "มีนบุรี";
+  }
+
+  function renderGidManagerTable() {
     buildGidManagerConfigs_();
     const tbody = document.getElementById("gidManagerTableBody");
     const monthText = document.getElementById("gidManagerMonthSelect")?.selectedOptions[0]?.text || "เดือนที่เลือก";
@@ -7076,7 +7082,7 @@ let endIso = "";
     if (!MONTHLY_GID_DATABASE[selectedMonth].branches) MONTHLY_GID_DATABASE[selectedMonth].branches = {};
 
     results.forEach(row => {
-      if (!row || !row.found || !hasUsableGid_(row.gid, cfg?.name || row.name)) return;
+      if (!row || !row.found || !hasUsableGid_(row.gid, row.name)) return;
       if (row.isMain) MONTHLY_GID_DATABASE[selectedMonth].mainGid = row.gid;
       else MONTHLY_GID_DATABASE[selectedMonth].branches[row.name] = row.gid;
     });
