@@ -3034,8 +3034,8 @@ let endIso = "";
   const ADS_GID = "924564040";
   // SECURITY NOTE: Sheet IDs / Apps Script URLs are public identifiers in client-side HTML.
   // Real access control must be enforced by Google sharing settings and Apps Script server-side checks.
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby95XQhi333pmAcPf9AE9HbjAnsQ37JTeuRhPo3aNMOZSGhecbWkB6ymg3XNG4luNmH_w/exec";
-  // Authentication and booking import share the same Apps Script deployment.
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzuzZf3tpldb9DCE2PW6fx9215TPIIh6kN-xUP2iyqrwPnj7GFUgrgsiC85zA_wfDqp/exec";
+  // Login and protected data APIs share one Apps Script deployment.
   const LOGIN_AUTH_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwTCgDPlHgpytu9IHVEwgOnoqrosRfqroCf2PeI8MTtgRDNhhlrDoIYcFOuh9JhZg1C/exec";
   // 📥 Apps Script แยกสำหรับนำเข้า Excel จอง / ปล่อย
   const BOOKING_IMPORT_GAS_URL = "https://script.google.com/macros/s/AKfycbwTCgDPlHgpytu9IHVEwgOnoqrosRfqroCf2PeI8MTtgRDNhhlrDoIYcFOuh9JhZg1C/exec";
@@ -4004,7 +4004,18 @@ let endIso = "";
     if (clearCache) sessionStorage.removeItem(BOOKING_DELIVERY_CACHE_KEY);
   }
 
-  async function refreshBookingDeliveryAfterImport_(){if(bookingDeliveryLoadPromise){try{await bookingDeliveryLoadPromise}catch(_){}}invalidateBookingDeliveryData({clearCache:true});await fetchBookingDeliveryData({force:true});return isBookingDeliveryLoaded} async function fetchBookingDeliveryData({ preserveRenderedData = false, force = false } = {}) {
+  async function refreshBookingDeliveryAfterImport_() {
+    // Let any request started before the import finish, then discard its cached
+    // result and fetch the newly imported booking snapshot / commission revision.
+    if (bookingDeliveryLoadPromise) {
+      try { await bookingDeliveryLoadPromise; } catch (_) {}
+    }
+    invalidateBookingDeliveryData({ clearCache: true });
+    await fetchBookingDeliveryData({ force: true });
+    return isBookingDeliveryLoaded;
+  }
+
+  async function fetchBookingDeliveryData({ preserveRenderedData = false, force = false } = {}) {
     const token = sessionStorage.getItem("ps_auth_token") || "";
     if (bookingDeliveryLoadPromise) return bookingDeliveryLoadPromise;
     if (!force && isBookingDeliveryLoaded && rawBookingRows.length && rawDeliveryRows.length) {
@@ -5721,7 +5732,25 @@ let endIso = "";
     }
   };
 
-    let MONTHLY_GID_DATABASE = JSON.parse(localStorage.getItem("MONTHLY_GID_DATABASE")) || { "sep69": defaultSeptGids }; (function migrateMonthlyGidCache_(){const signature=JSON.stringify({"มีนบุรี":BRANCH_IDS["มีนบุรี"]||""}),storageKey="MONTHLY_GID_SHEET_IDS_SIGNATURE",previous=localStorage.getItem(storageKey)||"";if(previous!==signature){Object.keys(MONTHLY_GID_DATABASE||{}).forEach(monthKey=>{const monthDb=MONTHLY_GID_DATABASE[monthKey];if(monthDb&&monthDb.branches)delete monthDb.branches["มีนบุรี"]});localStorage.setItem("MONTHLY_GID_DATABASE",JSON.stringify(MONTHLY_GID_DATABASE))}localStorage.setItem(storageKey,signature)})();
+  let MONTHLY_GID_DATABASE = JSON.parse(localStorage.getItem("MONTHLY_GID_DATABASE")) || {
+    "sep69": defaultSeptGids
+  };
+
+  // ล้าง GID ที่จำไว้เฉพาะเมื่อมีการเปลี่ยน Spreadsheet ID ของสาขา
+  // เพื่อให้เลข GID ของมีนบุรีถูกดึงจากแท็บจริงอัตโนมัติ ไม่ต้องแก้ในช่องเอง
+  (function migrateMonthlyGidCache_() {
+    const signature = JSON.stringify({ "มีนบุรี": BRANCH_IDS["มีนบุรี"] || "" });
+    const storageKey = "MONTHLY_GID_SHEET_IDS_SIGNATURE";
+    const previous = localStorage.getItem(storageKey) || "";
+  if (previous !== signature) {
+      Object.keys(MONTHLY_GID_DATABASE || {}).forEach(monthKey => {
+        const monthDb = MONTHLY_GID_DATABASE[monthKey];
+        if (monthDb && monthDb.branches) delete monthDb.branches["มีนบุรี"];
+      });
+      localStorage.setItem("MONTHLY_GID_DATABASE", JSON.stringify(MONTHLY_GID_DATABASE));
+    }
+    localStorage.setItem(storageKey, signature);
+  })();
 
   let CURRENT_CONFIGS = [];
   let GID_MANAGER_CONFIGS = [];
@@ -5750,7 +5779,10 @@ let endIso = "";
     if (!selectedMonth) return;
     localStorage.setItem("gidManagerSelectedMonth", selectedMonth);
     gidOperationSeq++;
-    renderGidManagerTable(); autoFetchGidsFromScript(); const selectedOption = document.getElementById("gidManagerMonthSelect")?.selectedOptions[0];
+    renderGidManagerTable();
+    // เปลี่ยนเดือนแล้วตรวจแท็บจริงทันที เพื่อเติม GID ให้เอง
+    autoFetchGidsFromScript();
+    const selectedOption = document.getElementById("gidManagerMonthSelect")?.selectedOptions[0];
     updateProgress(100, `⚙️ โหมดจัดการ GID ประจำเดือน ${selectedOption?.text || ""}`);
   }
 
@@ -8110,7 +8142,11 @@ let endIso = "";
           `✅ บันทึกสำเร็จ — ${month} Revision ${Number(confirmed.revision || 0)}` +
           ` • ${Number(confirmed.rows || total).toLocaleString()} รายการ`;
 
-        await loadCommissionCloseRevisions(month); const reportRefreshed=await refreshBookingDeliveryAfterImport_(); status.textContent += reportRefreshed?" • รีเฟรชรายงานจอง/ปล่อยแล้ว":" • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
+        await loadCommissionCloseRevisions(month);
+        const reportRefreshed = await refreshBookingDeliveryAfterImport_();
+        status.textContent += reportRefreshed
+          ? " • รีเฟรชรายงานจอง/ปล่อยแล้ว"
+          : " • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
         return;
       }
 
@@ -8123,7 +8159,9 @@ let endIso = "";
           `⚠ ไฟล์นี้เคยนำเข้าแล้วที่ ${month} Revision ${Number(duplicateExisting.revision || 0)} ` +
           `ระบบไม่สร้าง Revision ซ้ำ`;
 
-        await loadCommissionCloseRevisions(month); const reportRefreshed=await refreshBookingDeliveryAfterImport_(); status.textContent += reportRefreshed?" • รีเฟรชรายงานจอง/ปล่อยแล้ว":" • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
+        await loadCommissionCloseRevisions(month);
+        const reportRefreshed = await refreshBookingDeliveryAfterImport_();
+        if (reportRefreshed) status.textContent += " • ตรวจและรีเฟรชรายงานจอง/ปล่อยแล้ว";
         return;
       }
 
@@ -8998,7 +9036,11 @@ let endIso = "";
       if (data.snapshotBackfilled) {
         status.className = "import-status ok";
         status.textContent = `✅ Snapshot ${data.snapshotDate || ""} ถูกบันทึกเพิ่มแล้ว โดยไม่สร้างรายการ Master ซ้ำ • สถานะชุดข้อมูล: ${data.snapshotComplete ? "ครบ" : "บางส่วน"}`;
-        await loadBookingDeliveryImportHistory(); const reportRefreshed=await refreshBookingDeliveryAfterImport_(); status.textContent += reportRefreshed?" • รีเฟรชรายงานจอง/ปล่อยแล้ว":" • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
+        await loadBookingDeliveryImportHistory();
+        const reportRefreshed = await refreshBookingDeliveryAfterImport_();
+        status.textContent += reportRefreshed
+          ? " • รีเฟรชรายงานจอง/ปล่อยแล้ว"
+          : " • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
         return;
       }
 
@@ -9022,8 +9064,11 @@ let endIso = "";
         ` • Master ${Number(s.masterCount || 0).toLocaleString()} รายการ` +
         ` • จองแล้วปล่อยจริง ${Number(s.releasedCount || 0).toLocaleString()} รายการ`;
 
-      await loadBookingDeliveryImportHistory(); const reportRefreshed=await refreshBookingDeliveryAfterImport_(); status.textContent += reportRefreshed?" • รีเฟรชรายงานจอง/ปล่อยแล้ว":" • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
-      // รีเฟรชข้อมูลรายงานหลังนำเข้าเสร็จแล้ว
+      await loadBookingDeliveryImportHistory();
+      const reportRefreshed = await refreshBookingDeliveryAfterImport_();
+      status.textContent += reportRefreshed
+        ? " • รีเฟรชรายงานจอง/ปล่อยแล้ว"
+        : " • บันทึกแล้ว แต่รีเฟรชรายงานไม่สำเร็จ กรุณาเปิดหน้าใหม่อีกครั้ง";
     } catch (err) {
       console.error("Import booking/delivery V3 failed:", err);
       status.className = "import-status bad";
@@ -9088,6 +9133,7 @@ let endIso = "";
 
 </body>
 </html>
+
 
 
 
