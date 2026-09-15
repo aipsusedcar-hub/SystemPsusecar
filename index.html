@@ -3050,8 +3050,8 @@ let endIso = "";
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
   // 📥 Apps Script แยกสำหรับนำเข้า Excel จอง / ปล่อย
-  // ใช้ deployment เดียวกับ backend หลัก เพื่อให้ Supabase JWT ถูกตรวจสอบชุดเดียวกันทุกแท็บ
-  const BOOKING_IMPORT_GAS_URL = GAS_WEB_APP_URL;
+  // Backend นำเข้า/สรุปจอง-ปล่อยเป็น deployment แยกจาก Auth/GID
+  const BOOKING_IMPORT_GAS_URL = "https://script.google.com/macros/s/AKfycbztc_fppyr-W2PfaDerwH0yAoRBeLuhvIKOZSXR5vqLYEtJ2I4EjwaF9kF_riNWkaed/exec";
   
   // 🚗 แหล่งข้อมูลชีท จอง / ปล่อย
   // 🚗 แท็บยอดปล่อย / จอง: ล้างแหล่งข้อมูลเดิมแล้ว รอกำหนดใหม่
