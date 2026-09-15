@@ -4984,7 +4984,7 @@ let endIso = "";
                   isMatchBranch = true;
                 }
               } else if (b.name === "นครพนมพี่ต้น") {
-                if (rawRowLower.includes("นครพนมทีม c") || rawRowLower.includes("นครพนมทีมc") || cleanRow === "นครพนมทีมc") {
+                if (rawRowLower.includes("นครพนมทีม c") || rawRowLower.includes("นครพนมทีมc") || rawRowLower.includes("นครพนมทีม bc") || rawRowLower.includes("นครพนท ทีม bc") || cleanRow === "นครพนมทีมc") {
                   isMatchBranch = true;
                 }
               } else if (b.name === "นครราชสีมา") {
@@ -5310,7 +5310,7 @@ let endIso = "";
                   isMatch = true;
                 }
               } else if (b.name === "นครพนมพี่ต้น") {
-                if (rawRowLower.includes("นครพนมทีม c") || rawRowLower.includes("นครพนมทีมc") || cleanRow === "นครพนมทีมc") {
+                if (rawRowLower.includes("นครพนมทีม c") || rawRowLower.includes("นครพนมทีมc") || rawRowLower.includes("นครพนมทีม bc") || rawRowLower.includes("นครพนท ทีม bc") || cleanRow === "นครพนมทีมc") {
                   isMatch = true;
                 }
               } else if (b.name === "นครราชสีมา") {
@@ -5658,7 +5658,7 @@ let endIso = "";
     "นครราชสีมา": ["นครราชสีมา", "โคราช"],
     "มีนบุรี": ["มีนบุรี"],
     "อุบลราชธานี": ["อุบลราชธานี", "อุบล"],
-    "นครพนมทีม C": ["นครพนมทีม C", "นครพนม ทีม C", "นครพนม ทีมC", "ทีม c", "ทีม C", "ทีมC", "ทีม ซี"]
+    "นครพนมทีม C": ["นครพนมทีม C", "นครพนม ทีม C", "นครพนม ทีมC", "นครพนม ทีม BC", "นครพนท ทีม BC", "นครพนมทีม BC", "ทีม c", "ทีม C", "ทีมC", "ทีม ซี"]
   };
 
   // ชื่อแท็บเดือนในไฟล์จริงอาจใช้ปี ค.ศ. ย่อ 26 หรือ พ.ศ. ย่อ 69
