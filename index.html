@@ -20,6 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --primary: #f97316;
@@ -3037,6 +3038,17 @@ let endIso = "";
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby-2K3hiqPI0Utc2JQGrS9YueegPRMR-CRTCsI51T8wzVFVYWKEH6DPQzi9imluH0OL/exec";
   // Login and protected data APIs share one Apps Script deployment.
   const LOGIN_AUTH_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby-2K3hiqPI0Utc2JQGrS9YueegPRMR-CRTCsI51T8wzVFVYWKEH6DPQzi9imluH0OL/exec";
+  const SUPABASE_URL = "https://wfbhkzdcwluosxmreivh.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_yDIYEZ0mNpL2B4g5CKkgig_OUobs3A4";
+  const SUPABASE_USER_DIRECTORY = {
+    pun: { email: "psusedcar.no1.pun@gmail.com", name: "ปัน", role: "admin" },
+    jame: { email: "psusedcar.no1.jame@gmail.com", name: "เจม", role: "admin" },
+    book: { email: "psusedcar.no1.book@gmail.com", name: "บุ๊ค", role: "admin" },
+    admin: { email: "psusedcar.no1.admin@gmail.com", name: "อาเฟย ผู้พัฒนา", role: "admin" }
+  };
+  const supabaseAuthClient_ = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
   // 📥 Apps Script แยกสำหรับนำเข้า Excel จอง / ปล่อย
   const BOOKING_IMPORT_GAS_URL = "https://script.google.com/macros/s/AKfycbztc_fppyr-W2PfaDerwH0yAoRBeLuhvIKOZSXR5vqLYEtJ2I4EjwaF9kF_riNWkaed/exec";
   
@@ -3131,6 +3143,27 @@ let endIso = "";
     }
   }
 
+  async function supabaseLoginRequest_(username, password) {
+    const key = String(username || "").trim().toLowerCase();
+    const account = SUPABASE_USER_DIRECTORY[key];
+    if (!account || !supabaseAuthClient_) {
+      return { success: false, message: "ไม่พบ Username นี้ในระบบ" };
+    }
+    const { data, error } = await supabaseAuthClient_.auth.signInWithPassword({
+      email: account.email,
+      password
+    });
+    if (error || !data?.session?.access_token) {
+      return { success: false, message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" };
+    }
+    return {
+      success: true,
+      token: data.session.access_token,
+      expiresAt: Date.now() + Number(data.session.expires_in || 3600) * 1000,
+      user: { name: account.name, role: account.role }
+    };
+  }
+
   function hasUsableSession_() {
     const token = sessionStorage.getItem("ps_auth_token");
     const expiresAt = Number(sessionStorage.getItem("ps_auth_expires_at") || 0);
@@ -3172,7 +3205,7 @@ let endIso = "";
     }, 4000);
 
     try {
-      const data = await loginApiRequest_({ username, password });
+      const data = await supabaseLoginRequest_(username, password);
       if (!data?.success || !data?.token) {
         errorBox.textContent = data?.message || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
         return;
@@ -3325,11 +3358,25 @@ let endIso = "";
     msgBox.style.color = "var(--warning)";
 
     try {
+      if (supabaseAuthClient_) {
+        if (isUserChanged) {
+          throw new Error("USERNAME_CHANGE_NOT_SUPPORTED");
+        }
+        const updates = { data: { display_name: newName } };
+        if (isPassChanged) updates.password = newPass;
+        const { data: updated, error } = await supabaseAuthClient_.auth.updateUser(updates);
+        if (error) throw error;
+        const savedName = newName || updated?.user?.user_metadata?.display_name || currentName;
+        msgBox.textContent = "✔ บันทึกข้อมูลเรียบร้อยแล้ว";
+        msgBox.style.color = "var(--success)";
+        sessionStorage.setItem("ps_user_name", savedName);
+        document.getElementById("currentUserName").textContent = savedName;
+        setTimeout(() => closeProfileModal(), 1200);
+        return;
+      }
+
       const data = await authApiRequest("updateProfile", {
-        token,
-        newUsername: newUser,
-        newName,
-        newPassword: newPass
+        token, newUsername: newUser, newName, newPassword: newPass
       });
 
       if (data.success) {
@@ -3348,7 +3395,9 @@ let endIso = "";
         msgBox.style.color = "var(--danger)";
       }
     } catch (err) {
-      msgBox.textContent = "✖ การเชื่อมต่อล้มเหลว กรุณาลองใหม่อีกครั้ง";
+      msgBox.textContent = err?.message === "USERNAME_CHANGE_NOT_SUPPORTED"
+        ? "✖ Username เปลี่ยนไม่ได้ในระบบ Supabase กรุณาเปลี่ยนชื่อหรือรหัสผ่านแทน"
+        : "✖ การเชื่อมต่อล้มเหลว กรุณาลองใหม่อีกครั้ง";
       msgBox.style.color = "var(--danger)";
     } finally {
       document.getElementById("profileModalPass").value = "";
@@ -3395,7 +3444,7 @@ let endIso = "";
     clearSensitiveInputs();
     const token = sessionStorage.getItem("ps_auth_token") || "";
 
-    if (token) {
+    if (token && token.split(".").length !== 3) {
       try {
         await Promise.race([
           authApiRequest("logout", { token }),
@@ -3404,14 +3453,30 @@ let endIso = "";
       } catch (_) {}
     }
 
+    if (supabaseAuthClient_) {
+      try { await supabaseAuthClient_.auth.signOut(); } catch (_) {}
+    }
+
     clearStoredAuth_();
     showLoginScreen_("ออกจากระบบแล้ว กรุณาเข้าสู่ระบบอีกครั้ง");
     document.getElementById("loginUsername")?.focus();
   }
 
-  function startDashboard_() {
+  async function startDashboard_() {
     const loginMessage = sessionStorage.getItem("ps_login_message") || "";
     sessionStorage.removeItem("ps_login_message");
+    if (supabaseAuthClient_) {
+      const { data } = await supabaseAuthClient_.auth.getSession();
+      const email = String(data?.session?.user?.email || "").toLowerCase();
+      const account = Object.values(SUPABASE_USER_DIRECTORY).find(item => item.email === email);
+      if (data?.session?.access_token && account) {
+        sessionStorage.setItem("ps_auth_token", data.session.access_token);
+        sessionStorage.setItem("ps_user_name", account.name);
+        sessionStorage.setItem("ps_logged_user", Object.keys(SUPABASE_USER_DIRECTORY).find(key => SUPABASE_USER_DIRECTORY[key].email === email) || "");
+        sessionStorage.setItem("ps_user_role", account.role);
+        sessionStorage.setItem("ps_auth_expires_at", String(Date.now() + Number(data.session.expires_in || 3600) * 1000));
+      }
+    }
     if (!hasUsableSession_()) {
       clearStoredAuth_();
       showLoginScreen_(loginMessage);
