@@ -3558,6 +3558,8 @@ let endIso = "";
   const BOOKING_DELIVERY_CACHE_KEY = "ps_booking_delivery_snapshot_v2";
   const BOOKING_DELIVERY_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
   let isBookingDeliveryLoaded = false;
+  // ป้องกันผลตอบกลับที่โหลดช้ากว่านำตัวกรองเก่ากลับมาทับค่าที่ผู้ใช้เพิ่งเลือก
+  let bookingDeliveryFiltersTouched = false;
 
   function toggleSidebarMenu() {
     const sidebar = document.getElementById("sidebarMenu");
@@ -3953,6 +3955,7 @@ let endIso = "";
 
   function saveBookingDeliveryFilters_() {
     try {
+      bookingDeliveryFiltersTouched = true;
       const value = id => document.getElementById(id)?.value || "";
       localStorage.setItem(BOOKING_DELIVERY_FILTERS_STORAGE_KEY, JSON.stringify({
         mode: value("bookingPeriodMode"),
@@ -4084,6 +4087,9 @@ let endIso = "";
 
   async function fetchBookingDeliveryData({ preserveRenderedData = false, force = false } = {}) {
     const token = sessionStorage.getItem("ps_auth_token") || "";
+    // จำสถานะก่อนเริ่มโหลด: ถ้าผู้ใช้เปลี่ยนตัวกรองระหว่างรอข้อมูล
+    // จะต้องไม่กู้ค่าที่บันทึกไว้เดิมกลับมาทับภายหลัง
+    const mayRestoreSavedFilters = !bookingDeliveryFiltersTouched;
     if (bookingDeliveryLoadPromise) return bookingDeliveryLoadPromise;
     if (!force && isBookingDeliveryLoaded && rawBookingRows.length && rawDeliveryRows.length) {
       return Promise.resolve(true);
@@ -4152,7 +4158,9 @@ let endIso = "";
         saveBookingDeliveryCache_();
         setDefaultBookingPeriod();
         populateCommissionMonthDropdown();
-        const restoredFilters = restoreBookingDeliveryFilters_();
+        const restoredFilters = mayRestoreSavedFilters && !bookingDeliveryFiltersTouched
+          ? restoreBookingDeliveryFilters_()
+          : true;
         if (!restoredFilters) syncBookingDeliveryFiltersToMainRange_({ render: false });
         renderBookingDeliveryTab();
       } catch (err) {
