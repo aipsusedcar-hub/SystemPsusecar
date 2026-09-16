@@ -9206,6 +9206,28 @@ let endIso = "";
     }
   }
 
+  // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
+  const SITE_BUILD_VERSION = "2026-09-16.1";
+  let siteUpdateNavigationStarted_ = false;
+
+  async function checkForSiteUpdate_() {
+    if (siteUpdateNavigationStarted_ || document.visibilityState !== "visible") return;
+    try {
+      const response = await fetch(`site-version.json?t=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const latest = await response.json();
+      const latestVersion = String(latest?.version || "").trim();
+      if (!latestVersion || latestVersion === SITE_BUILD_VERSION) return;
+
+      siteUpdateNavigationStarted_ = true;
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("v", latestVersion);
+      window.location.replace(nextUrl.toString());
+    } catch (_) {
+      // หากเครือข่ายขาดชั่วคราว ให้ใช้งานเวอร์ชันปัจจุบันต่อไป
+    }
+  }
+
   // แสดงแดชบอร์ดเมื่อ session ยังใช้ได้; มิฉะนั้นใช้หน้า login ที่ฝังอยู่ใน index
   window.addEventListener("DOMContentLoaded", () => {
     initGidManagerMonthSelect_();
@@ -9219,6 +9241,8 @@ let endIso = "";
     initBookingDeliveryImportUI();
     initCommissionCloseImportUI();
     document.getElementById("loginForm").addEventListener("submit", attemptLogin_);
+    checkForSiteUpdate_();
+    setInterval(checkForSiteUpdate_, 2 * 60 * 1000);
     startDashboard_();
   });
 </script>
