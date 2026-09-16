@@ -6707,7 +6707,14 @@ let endIso = "";
       if (statusBar) statusBar.style.display = "flex";
       filterSpan.style.display = "none";
       if (btnReceipt) btnReceipt.style.display = "inline-block";
-      
+
+      // หน้าสรุปผลรายสาขาใช้ข้อมูลของวันก่อนหน้าเสมอ โดยไม่เปลี่ยนค่าเริ่มต้นของแท็บอื่น
+      if (setBranchSummaryToPreviousDay_()) {
+        buildCurrentConfigs();
+        renderGidManagerTable();
+        fetchAllData();
+      }
+
       updateProgress(100, `✅ โหลดข้อมูลเดือน ${monthText} สำเร็จ`);
       renderSummaryTable();
     } else {
@@ -7460,9 +7467,10 @@ let endIso = "";
   }
 
   function clearFilters() {
-    const previousDay = getLocalPreviousDayIso_();
-    document.getElementById("dateFilter").value = previousDay;
-    document.getElementById("dateEndFilter").value = previousDay;
+    const isSummaryTab = document.getElementById("summaryTab")?.classList.contains("active");
+    const defaultDate = isSummaryTab ? getLocalPreviousDayIso_() : getLocalTodayIso_();
+    document.getElementById("dateFilter").value = defaultDate;
+    document.getElementById("dateEndFilter").value = defaultDate;
     document.getElementById("searchKeyword").value = "";
     applyFilters();
   }
@@ -7517,11 +7525,20 @@ let endIso = "";
   }
 
   function initializeCurrentDateFilters_() {
+    const today = getLocalTodayIso_();
+    const startInput = document.getElementById("dateFilter");
+    const endInput = document.getElementById("dateEndFilter");
+    if (startInput) startInput.value = today;
+    if (endInput) endInput.value = today;
+  }
+
+  function setBranchSummaryToPreviousDay_() {
     const previousDay = getLocalPreviousDayIso_();
     const startInput = document.getElementById("dateFilter");
     const endInput = document.getElementById("dateEndFilter");
     if (startInput) startInput.value = previousDay;
     if (endInput) endInput.value = previousDay;
+    return syncGlobalMonthToDateRange_();
   }
 
   // 📥 Import Excel จอง / เซ็นต์ / อนุมัติ / ปล่อย → Master History V3
@@ -9193,6 +9210,10 @@ let endIso = "";
   window.addEventListener("DOMContentLoaded", () => {
     initGidManagerMonthSelect_();
     initializeCurrentDateFilters_();
+    // หน้าแรกคือสรุปผลรายสาขา จึงตั้งเฉพาะหน้านี้เป็นวันก่อนหน้า 1 วัน
+    if (document.getElementById("summaryTab")?.classList.contains("active")) {
+      setBranchSummaryToPreviousDay_();
+    }
     initAdsBookingDeliveryDisplayMode_();
     initBookingDeliveryImportMode_();
     initBookingDeliveryImportUI();
