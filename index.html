@@ -7460,9 +7460,9 @@ let endIso = "";
   }
 
   function clearFilters() {
-    const today = getLocalTodayIso_();
-    document.getElementById("dateFilter").value = today;
-    document.getElementById("dateEndFilter").value = today;
+    const previousDay = getLocalPreviousDayIso_();
+    document.getElementById("dateFilter").value = previousDay;
+    document.getElementById("dateEndFilter").value = previousDay;
     document.getElementById("searchKeyword").value = "";
     applyFilters();
   }
@@ -7470,6 +7470,12 @@ let endIso = "";
   function getLocalTodayIso_() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }
+
+  function getLocalPreviousDayIso_() {
+    const now = new Date();
+    const previousDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    return `${previousDay.getFullYear()}-${String(previousDay.getMonth() + 1).padStart(2, "0")}-${String(previousDay.getDate()).padStart(2, "0")}`;
   }
 
   function setAdsExpenseCurrentMonthRange_() {
@@ -7511,11 +7517,11 @@ let endIso = "";
   }
 
   function initializeCurrentDateFilters_() {
-    const today = getLocalTodayIso_();
+    const previousDay = getLocalPreviousDayIso_();
     const startInput = document.getElementById("dateFilter");
     const endInput = document.getElementById("dateEndFilter");
-    if (startInput) startInput.value = today;
-    if (endInput) endInput.value = today;
+    if (startInput) startInput.value = previousDay;
+    if (endInput) endInput.value = previousDay;
   }
 
   // 📥 Import Excel จอง / เซ็นต์ / อนุมัติ / ปล่อย → Master History V3
