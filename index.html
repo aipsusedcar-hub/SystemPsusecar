@@ -4936,12 +4936,7 @@ let endIso = "";
   async function loadSharedMonthlyAdsBookingDelivery_(startIso, endIso, rangeKey) {
     const match = String(startIso || "").match(/^(\d{4})-(\d{2})-\d{2}$/);
     if (!match || !endIso || startIso.slice(0, 7) !== endIso.slice(0, 7)) return false;
-    const year = Number(match[1]);
-    const monthNumber = Number(match[2]);
     const monthIso = `${match[1]}-${match[2]}`;
-    const firstDay = `${match[1]}-${match[2]}-01`;
-    const lastDay = `${match[1]}-${match[2]}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, "0")}`;
-    if (startIso !== firstDay || endIso !== lastDay) return false;
 
     await fetchBookingDeliveryData({ preserveRenderedData: true });
     if (!isBookingDeliveryLoaded || bookingDeliverySourceNotice) return false;
@@ -9267,7 +9262,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-16.3";
+  const SITE_BUILD_VERSION = "2026-09-16.4";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
