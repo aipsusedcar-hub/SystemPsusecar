@@ -14,6 +14,9 @@
   <meta name="format-detection" content="telephone=no">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>ระบบตรวจสอบข้อมูลลูกค้า Facebook V29</title>
   <link rel="preconnect" href="https://script.google.com" crossorigin>
   <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
@@ -9207,8 +9210,18 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-16.1";
+  const SITE_BUILD_VERSION = "2026-09-16.2";
   let siteUpdateNavigationStarted_ = false;
+
+  function useCanonicalSiteUrl_() {
+    const url = new URL(window.location.href);
+    // cb และ v ใช้เพียงครั้งเดียวเพื่อพ้นแคชเก่า จากนั้นกลับมาที่ลิงก์หลักเดียว
+    url.searchParams.delete("cb");
+    url.searchParams.delete("v");
+    if (url.href !== window.location.href) {
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }
 
   async function checkForSiteUpdate_() {
     if (siteUpdateNavigationStarted_ || document.visibilityState !== "visible") return;
@@ -9230,6 +9243,7 @@ let endIso = "";
 
   // แสดงแดชบอร์ดเมื่อ session ยังใช้ได้; มิฉะนั้นใช้หน้า login ที่ฝังอยู่ใน index
   window.addEventListener("DOMContentLoaded", () => {
+    useCanonicalSiteUrl_();
     initGidManagerMonthSelect_();
     initializeCurrentDateFilters_();
     // หน้าแรกคือสรุปผลรายสาขา จึงตั้งเฉพาะหน้านี้เป็นวันก่อนหน้า 1 วัน
