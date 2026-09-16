@@ -3488,6 +3488,12 @@ let endIso = "";
     }
     const savedName = sessionStorage.getItem("ps_user_name") || "แอดมิน";
     const savedRole = sessionStorage.getItem("ps_user_role") || "";
+    try {
+      await loadSharedGidConfigs_();
+    } catch (err) {
+      // ใช้ค่าในเครื่องชั่วคราวได้หาก Supabase ขัดข้อง แต่จะแจ้งใน console เพื่อตรวจสอบต่อ
+      console.warn("Shared GID configuration is unavailable:", err);
+    }
     showDashboard(savedName, savedRole);
     fetchAllData();
   }
@@ -5798,6 +5804,48 @@ let endIso = "";
   let MONTHLY_GID_DATABASE = JSON.parse(localStorage.getItem("MONTHLY_GID_DATABASE")) || {
     "sep69": defaultSeptGids
   };
+  const GID_CONFIG_TABLE = "gid_monthly_configs";
+
+  function normalizeSharedGidConfig_(config) {
+    const branches = {};
+    Object.entries(config?.branches || {}).forEach(([name, gid]) => {
+      const value = cleanText(gid);
+      if (value) branches[name] = value;
+    });
+    return { mainGid: cleanText(config?.mainGid), branches };
+  }
+
+  async function loadSharedGidConfigs_() {
+    if (!supabaseAuthClient_) return false;
+    const { data, error } = await supabaseAuthClient_
+      .from(GID_CONFIG_TABLE)
+      .select("month_key, config");
+    if (error) throw new Error(error.message || "อ่าน GID กลางไม่สำเร็จ");
+
+    (data || []).forEach(row => {
+      const monthKey = cleanText(row?.month_key);
+      if (monthKey) MONTHLY_GID_DATABASE[monthKey] = normalizeSharedGidConfig_(row?.config);
+    });
+    localStorage.setItem("MONTHLY_GID_DATABASE", JSON.stringify(MONTHLY_GID_DATABASE));
+    return true;
+  }
+
+  async function saveSharedGidConfig_(monthKey) {
+    if (!supabaseAuthClient_) throw new Error("Supabase ยังไม่พร้อมใช้งาน");
+    const { data: sessionData } = await supabaseAuthClient_.auth.getSession();
+    const email = String(sessionData?.session?.user?.email || "").toLowerCase();
+    if (!email) throw new Error("กรุณาเข้าสู่ระบบใหม่ก่อนบันทึก GID กลาง");
+
+    const { error } = await supabaseAuthClient_
+      .from(GID_CONFIG_TABLE)
+      .upsert({
+        month_key: monthKey,
+        config: normalizeSharedGidConfig_(MONTHLY_GID_DATABASE[monthKey]),
+        updated_at: new Date().toISOString(),
+        updated_by: email
+      }, { onConflict: "month_key" });
+    if (error) throw new Error(error.message || "บันทึก GID กลางไม่สำเร็จ");
+  }
 
   // ล้าง GID ที่จำไว้เฉพาะเมื่อมีการเปลี่ยน Spreadsheet ID ของสาขา
   // เพื่อให้เลข GID ของมีนบุรีถูกดึงจากแท็บจริงอัตโนมัติ ไม่ต้องแก้ในช่องเอง
@@ -6016,7 +6064,7 @@ let endIso = "";
     return results;
   }
 
-  function saveGidsForCurrentMonth() {
+  async function saveGidsForCurrentMonth() {
     const selectedMonth = getGidManagerSelectedMonth_();
     buildGidManagerConfigs_();
     if (!MONTHLY_GID_DATABASE[selectedMonth]) {
@@ -6036,8 +6084,13 @@ let endIso = "";
       }
     });
 
-    localStorage.setItem("MONTHLY_GID_DATABASE", JSON.stringify(MONTHLY_GID_DATABASE));
-    alert("บันทึก GID เรียบร้อยแล้ว!");
+    try {
+      await saveSharedGidConfig_(selectedMonth);
+      localStorage.setItem("MONTHLY_GID_DATABASE", JSON.stringify(MONTHLY_GID_DATABASE));
+      alert("บันทึก GID กลางเรียบร้อยแล้ว ทุกบัญชีจะใช้ค่าใหม่นี้เมื่อรีเฟรชหน้าเว็บ");
+    } catch (err) {
+      alert(`บันทึก GID กลางไม่สำเร็จ: ${err?.message || err}`);
+    }
   }
 
   async function autoFetchGidsFromScript() {
@@ -6145,10 +6198,14 @@ let endIso = "";
 
       localStorage.setItem("MONTHLY_GID_DATABASE", JSON.stringify(MONTHLY_GID_DATABASE));
 
+      // ผู้ใช้ที่เข้าสู่ระบบทุกคนเผยแพร่ GID ชุดที่ดึงได้เป็นค่ากลางทันที
+      await saveSharedGidConfig_(selectedMonth);
+
       alert(
         `ดึง GID ${targetLabel} เสร็จแล้ว\n` +
         `พบ ${foundCount}/${GID_MANAGER_CONFIGS.length} ชีท` +
-        (errorCount ? `\nเชื่อมต่อไม่สำเร็จ ${errorCount} ชีท` : "")
+        (errorCount ? `\nเชื่อมต่อไม่สำเร็จ ${errorCount} ชีท` : "") +
+        "\nเผยแพร่ GID กลางให้ทุกบัญชีแล้ว"
       );
 
     } catch (err) {
@@ -9210,7 +9267,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-16.2";
+  const SITE_BUILD_VERSION = "2026-09-16.3";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
