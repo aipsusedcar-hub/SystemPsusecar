@@ -5769,7 +5769,7 @@ let endIso = "";
   const BRANCH_ALIASES = {
     "บึงกาฬ": ["บึงกาฬ", "บึงกาฬฟ"],
     "หนองบัวลำภู": ["หนองบัวลำภู", "หนองบัว"],
-    "ขอนแก่น": ["ขอนแก่น", "ทีมขอนแก่น", "ขอนแก่นทีม", "ขอนแก่น ทีม"],
+    "ขอนแก่น": ["ขอนแก่น"],
     "หนองเม็ก": ["หนองเม็ก", "หนองเม็ก/หนองหาร", "หนองหาน"],
     "ยโสธร": ["ยโสธร"],
     "ร้อยเอ็ด": ["ร้อยเอ็ด"],
@@ -7124,15 +7124,9 @@ let endIso = "";
 
       if (rowInRange) {
         const leadVal = row[colMap.leadIdx] !== undefined ? cleanText(row[colMap.leadIdx]) : "";
-        const primaryLeadIsValid = leadVal !== "" && leadVal !== "-" && leadVal !== "null" && leadVal !== "เบอร์โทร/ไอดีไลน์" && leadVal !== "ลำดับ" && leadVal !== "สาขา";
-        // ชีทบางสาขาใช้ชื่อหัวคอลัมน์เบอร์ไม่เหมือนกัน จึงหาเบอร์โทรจากคอลัมน์อื่นเป็น fallback
-        const hasPhoneElsewhere = row.some((cell, index) => {
-          if (index === colMap.dateIdx) return false;
-          const text = cleanText(cell);
-          const digits = text.replace(/\D/g, "");
-          return !normalizeDateToISO(text) && digits.length >= 9 && digits.length <= 15;
-        });
-        if (primaryLeadIsValid || hasPhoneElsewhere) {
+        const hasValidLead = leadVal !== "" && leadVal !== "-" && leadVal !== "null" && leadVal !== "เบอร์โทร/ไอดีไลน์" && leadVal !== "ลำดับ" && leadVal !== "สาขา";
+
+        if (hasValidLead) {
           validRows.push(row);
         }
       }
@@ -9484,7 +9478,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-18.8";
+  const SITE_BUILD_VERSION = "2026-09-18.7";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
