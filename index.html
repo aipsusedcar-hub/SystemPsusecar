@@ -2076,6 +2076,69 @@ function auditPopupFlow(step, data){
       <button class="tab-btn" onclick="switchTab('detailMainTab')">📋 รายละเอียด (ชีทกลาง)</button>
       <button class="tab-btn" onclick="switchTab('detailBranchTab')">📂 รายละเอียด (ชีทสาขา)</button>
       <button class="tab-btn" onclick="switchTab('adsExpenseTab')">💰 สรุปแอดข้อความ/เงิน</button>
+      <button class="tab-btn" onclick="switchTab('adminAnalysisTab')">📊 วิเคราะห์แอดมิน</button>
+      <!-- 📊 แท็บ: วิเคราะห์แอดมิน -->
+      <div id="adminAnalysisTab" class="tab-content">
+        <div style="background:#0f172a; padding:16px; border-radius:12px; border:1px solid var(--border-color); margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0 0 6px 0; color:var(--text-main); font-size:16px;">📊 วิเคราะห์ผลงานแอดมิน</h3>
+              <div id="adminAnalysisDateLabel" style="font-size:12px; color:var(--text-muted);">ช่วงวันที่: -</div>
+            </div>
+            <button class="btn-success" type="button" onclick="refreshAdminAnalysisTab_()">🔄 รีเฟรชการวิเคราะห์</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-card-title">👥 จำนวนแอดมิน</span>
+            <span class="kpi-card-value" id="adminAnalysisKpiAdmins">0</span>
+            <span style="font-size:11px;color:var(--text-muted);">นับจากแอดมินที่มีสาขารับผิดชอบ</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-card-title">💬 ข้อความรวม</span>
+            <span class="kpi-card-value" id="adminAnalysisKpiMessages">0</span>
+            <span style="font-size:11px;color:var(--text-muted);">รวมข้อความจากทุกสาขาที่รับผิดชอบ</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-card-title">📞 จำนวนเบอร์รวม</span>
+            <span class="kpi-card-value" id="adminAnalysisKpiPhones">0</span>
+            <span style="font-size:11px;color:var(--text-muted);">อิงข้อมูลชีทกลางช่วงวันที่เดียวกัน</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-card-title">🎯 % ได้เบอร์รวม</span>
+            <span class="kpi-card-value" id="adminAnalysisKpiPhoneRate">0%</span>
+            <span style="font-size:11px;color:var(--text-muted);">จำนวนเบอร์ ÷ ข้อความ</span>
+          </div>
+        </div>
+
+        <div class="table-responsive" style="max-height:none; overflow-y:visible;">
+          <table class="styled-report-table">
+            <thead>
+              <tr>
+                <th style="width:60px;">ลำดับ</th>
+                <th style="min-width:130px;">แอดมิน</th>
+                <th style="min-width:240px;">สาขาที่รับผิดชอบ</th>
+                <th style="width:95px;">ข้อความ</th>
+                <th style="width:95px;">เบอร์</th>
+                <th style="width:105px;">% ได้เบอร์</th>
+                <th style="width:115px;">เงินที่ใช้</th>
+                <th style="width:115px;">บาท/ข้อความ</th>
+                <th style="width:115px;">บาท/เบอร์</th>
+                <th style="width:90px;">จอง</th>
+                <th style="width:90px;">ปล่อย</th>
+              </tr>
+            </thead>
+            <tbody id="adminAnalysisTableBody">
+              <tr><td class="empty-row" colspan="11">กำลังเตรียมข้อมูลวิเคราะห์แอดมิน...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:12px; padding:10px 12px; border:1px solid var(--border-color); border-radius:10px; background:#0f172a; color:var(--text-muted); font-size:11px; line-height:1.6;">
+          ℹ️ หน้านี้สรุปจากข้อมูลชุดเดียวกับแท็บ “สรุปแอดข้อความ/เงิน” แล้วรวมตามชื่อแอดมิน โดยชื่อรูปแบบ “ชื่อ/เก็บข้อมูล” จะรวมเป็นแอดมินชื่อหลักเดียวกัน
+        </div>
+      </div>
       <!-- 🚗 แท็บ: ยอดปล่อย / จอง -->
       <button class="tab-btn" onclick="switchTab('bookingDeliveryTab')">🚗 ยอดปล่อย / จอง</button>
       <button class="tab-btn" onclick="switchTab('importBookingDeliveryTab')">📥 นำเข้าข้อมูล จอง / ปล่อย</button>
@@ -6808,8 +6871,16 @@ let endIso = "";
         fetchAdsDataDirectly();
         fetchAdsMasterDailyBookingDelivery();
         if (adsMonthChanged) fetchAllData();
-      } else if (tabId === "bookingDeliveryTab") {
+      } else if (tabId === "adminAnalysisTab") {
         document.querySelectorAll(".tab-btn")[4].classList.add("active");
+        document.getElementById("adminAnalysisTab").classList.add("active");
+        if (mainToolbar) mainToolbar.style.display = "flex";
+        if (statusBar) statusBar.style.display = "flex";
+        filterSpan.style.display = "none";
+        updateProgress(60, "📊 กำลังเตรียมข้อมูลวิเคราะห์แอดมิน...");
+        void refreshAdminAnalysisTab_();
+      } else if (tabId === "bookingDeliveryTab") {
+        document.querySelectorAll(".tab-btn")[5].classList.add("active");
         document.getElementById("bookingDeliveryTab").classList.add("active");
 
         // ซ่อน Toolbar และแถบสถานะเฉพาะแท็บ 🚗 ยอดปล่อย / จอง
@@ -6821,14 +6892,14 @@ let endIso = "";
         if (!restoreBookingDeliveryFilters_()) syncBookingDeliveryFiltersToMainRange_({ render: false });
         renderBookingDeliveryTab();
       } else if (tabId === "importBookingDeliveryTab") {
-        document.querySelectorAll(".tab-btn")[5].classList.add("active");
+        document.querySelectorAll(".tab-btn")[6].classList.add("active");
         document.getElementById("importBookingDeliveryTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "none";
         if (statusBar) statusBar.style.display = "none";
         filterSpan.style.display = "none";
         loadBookingDeliveryImportHistory();
       } else if (tabId === "nightMessageTab") {
-        document.querySelectorAll(".tab-btn")[6].classList.add("active");
+        document.querySelectorAll(".tab-btn")[7].classList.add("active");
         document.getElementById("nightMessageTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "flex";
         if (statusBar) statusBar.style.display = "flex";
@@ -6836,7 +6907,7 @@ let endIso = "";
         updateProgress(100, `🌙 โหมดข้อความกลางคืน ประจำเดือน ${monthText}`);
         renderNightMessageTable();
       } else if (tabId === "gidManagerTab") {
-        document.querySelectorAll(".tab-btn")[7].classList.add("active");
+        document.querySelectorAll(".tab-btn")[8].classList.add("active");
         document.getElementById("gidManagerTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "none";
         if (statusBar) statusBar.style.display = "flex";
@@ -6848,7 +6919,7 @@ let endIso = "";
         // ลด false fail / request ซ้ำ / การเขียนทับสถานะสีเขียว
         renderGidManagerTable();
       } else if (tabId === "monthlyChartTab") {
-        document.querySelectorAll(".tab-btn")[8].classList.add("active");
+        document.querySelectorAll(".tab-btn")[9].classList.add("active");
         document.getElementById("monthlyChartTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "none";
         if (statusBar) statusBar.style.display = "none";
@@ -6861,6 +6932,142 @@ let endIso = "";
       buildCurrentConfigs();
       renderGidManagerTable();
       fetchAllData();
+    }
+  }
+
+  function parseAdminAnalysisNumber_(value) {
+    const raw = String(value ?? "").replace(/,/g, "").trim();
+    const match = raw.match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) || 0 : 0;
+  }
+
+  function normalizeAdminAnalysisName_(value) {
+    const raw = cleanText(value || "");
+    if (!raw) return "ไม่ระบุแอดมิน";
+    return raw.split("/")[0].trim() || raw;
+  }
+
+  function collectAdminAnalysisFromAdsTable_() {
+    const tbody = document.getElementById("reportTableBody");
+    if (!tbody) return [];
+
+    const adminMap = new Map();
+    Array.from(tbody.querySelectorAll("tr")).forEach(tr => {
+      if (tr.classList.contains("subtotal-row") || tr.classList.contains("grandtotal-row") || tr.querySelector(".empty-row")) return;
+      const cells = Array.from(tr.querySelectorAll("td"));
+      if (cells.length < 8) return;
+
+      // อ่านจากท้ายแถว เพื่อรองรับแถวแรกของแต่ละทีมที่มี rowspan คอลัมน์ทีมเพิ่มมา 1 ช่อง
+      const branch = cleanText(cells[cells.length - 8]?.textContent || "");
+      const rawAdmin = cleanText(cells[cells.length - 7]?.textContent || "");
+      if (!branch || !rawAdmin) return;
+
+      const admin = normalizeAdminAnalysisName_(rawAdmin);
+      const messages = parseAdminAnalysisNumber_(cells[cells.length - 6]?.textContent);
+      const phones = parseAdminAnalysisNumber_(cells[cells.length - 5]?.textContent);
+      const spend = parseAdminAnalysisNumber_(cells[cells.length - 4]?.textContent);
+      const booking = parseAdminAnalysisNumber_(cells[cells.length - 2]?.textContent);
+      const delivery = parseAdminAnalysisNumber_(cells[cells.length - 1]?.textContent);
+
+      if (!adminMap.has(admin)) {
+        adminMap.set(admin, { admin, branches: [], messages:0, phones:0, spend:0, booking:0, delivery:0 });
+      }
+      const item = adminMap.get(admin);
+      if (!item.branches.includes(branch)) item.branches.push(branch);
+      item.messages += messages;
+      item.phones += phones;
+      item.spend += spend;
+      item.booking += booking;
+      item.delivery += delivery;
+    });
+
+    return Array.from(adminMap.values()).sort((a, b) => {
+      const rateA = a.messages > 0 ? a.phones / a.messages : 0;
+      const rateB = b.messages > 0 ? b.phones / b.messages : 0;
+      if (rateB !== rateA) return rateB - rateA;
+      return b.phones - a.phones;
+    });
+  }
+
+  function renderAdminAnalysisTab_() {
+    const tbody = document.getElementById("adminAnalysisTableBody");
+    if (!tbody) return;
+
+    const { start, end } = getMainDateRange();
+    const label = document.getElementById("adminAnalysisDateLabel");
+    if (label) label.textContent = `ช่วงวันที่: ${formatDisplayDateTH(start)} - ${formatDisplayDateTH(end)}`;
+
+    const rows = collectAdminAnalysisFromAdsTable_();
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td class="empty-row" colspan="11">ยังไม่มีข้อมูลสำหรับวิเคราะห์แอดมินในช่วงวันที่นี้</td></tr>';
+      ["adminAnalysisKpiAdmins","adminAnalysisKpiMessages","adminAnalysisKpiPhones"].forEach(id => {
+        const el = document.getElementById(id); if (el) el.textContent = "0";
+      });
+      const rateEl = document.getElementById("adminAnalysisKpiPhoneRate");
+      if (rateEl) rateEl.textContent = "0%";
+      return;
+    }
+
+    const totals = rows.reduce((acc, row) => {
+      acc.messages += row.messages;
+      acc.phones += row.phones;
+      acc.spend += row.spend;
+      acc.booking += row.booking;
+      acc.delivery += row.delivery;
+      return acc;
+    }, { messages:0, phones:0, spend:0, booking:0, delivery:0 });
+
+    const totalRate = totals.messages > 0 ? (totals.phones / totals.messages) * 100 : 0;
+    document.getElementById("adminAnalysisKpiAdmins").textContent = rows.length.toLocaleString();
+    document.getElementById("adminAnalysisKpiMessages").textContent = totals.messages.toLocaleString();
+    document.getElementById("adminAnalysisKpiPhones").textContent = totals.phones.toLocaleString();
+    document.getElementById("adminAnalysisKpiPhoneRate").textContent = `${totalRate.toFixed(2)}%`;
+
+    tbody.innerHTML = rows.map((row, index) => {
+      const rate = row.messages > 0 ? (row.phones / row.messages) * 100 : 0;
+      const cpm = row.messages > 0 ? row.spend / row.messages : 0;
+      const cpp = row.phones > 0 ? row.spend / row.phones : 0;
+      return `
+        <tr>
+          <td style="text-align:center;color:var(--text-muted);">${index + 1}</td>
+          <td style="font-weight:800;">${escapeSecurityHtml(row.admin)}</td>
+          <td style="white-space:normal;line-height:1.55;">${escapeSecurityHtml(row.branches.join(", "))}</td>
+          <td style="text-align:center;font-weight:700;">${row.messages.toLocaleString()}</td>
+          <td style="text-align:center;font-weight:800;color:#fb923c;">${row.phones.toLocaleString()}</td>
+          <td style="text-align:center;font-weight:800;color:#34d399;">${rate.toFixed(2)}%</td>
+          <td style="text-align:center;">${row.spend.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+          <td style="text-align:center;">${cpm > 0 ? cpm.toFixed(2) : "-"}</td>
+          <td style="text-align:center;">${cpp > 0 ? cpp.toFixed(2) : "-"}</td>
+          <td style="text-align:center;color:#38bdf8;font-weight:700;">${row.booking.toLocaleString()}</td>
+          <td style="text-align:center;color:#34d399;font-weight:700;">${row.delivery.toLocaleString()}</td>
+        </tr>`;
+    }).join("") + `
+      <tr class="grandtotal-row">
+        <td colspan="3" style="text-align:right;">รวมทั้งหมด</td>
+        <td style="text-align:center;">${totals.messages.toLocaleString()}</td>
+        <td style="text-align:center;">${totals.phones.toLocaleString()}</td>
+        <td style="text-align:center;color:#34d399;font-weight:800;">${totalRate.toFixed(2)}%</td>
+        <td style="text-align:center;">${totals.spend.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+        <td style="text-align:center;">${totals.messages > 0 ? (totals.spend / totals.messages).toFixed(2) : "-"}</td>
+        <td style="text-align:center;">${totals.phones > 0 ? (totals.spend / totals.phones).toFixed(2) : "-"}</td>
+        <td style="text-align:center;">${totals.booking.toLocaleString()}</td>
+        <td style="text-align:center;">${totals.delivery.toLocaleString()}</td>
+      </tr>`;
+  }
+
+  async function refreshAdminAnalysisTab_() {
+    const tbody = document.getElementById("adminAnalysisTableBody");
+    if (tbody) tbody.innerHTML = '<tr><td class="empty-row" colspan="11">⏳ กำลังรวมข้อมูลแอดมิน...</td></tr>';
+    try {
+      await fetchAdsDataDirectly();
+      await fetchAdsMasterDailyBookingDelivery();
+      renderReportTable();
+      renderAdminAnalysisTab_();
+      updateProgress(100, "✅ วิเคราะห์ข้อมูลแอดมินเรียบร้อย");
+    } catch (error) {
+      console.error("Admin analysis refresh error:", error);
+      if (tbody) tbody.innerHTML = `<tr><td class="empty-row" colspan="11" style="color:var(--danger);">✖ ไม่สามารถโหลดข้อมูลวิเคราะห์แอดมินได้</td></tr>`;
+      updateProgress(100, "❌ โหลดข้อมูลวิเคราะห์แอดมินไม่สำเร็จ");
     }
   }
 
@@ -9262,7 +9469,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-16.4";
+  const SITE_BUILD_VERSION = "2026-09-18.1";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
