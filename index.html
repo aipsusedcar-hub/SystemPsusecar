@@ -2077,68 +2077,6 @@ function auditPopupFlow(step, data){
       <button class="tab-btn" onclick="switchTab('detailBranchTab')">📂 รายละเอียด (ชีทสาขา)</button>
       <button class="tab-btn" onclick="switchTab('adsExpenseTab')">💰 สรุปแอดข้อความ/เงิน</button>
       <button class="tab-btn" onclick="switchTab('adminAnalysisTab')">📊 วิเคราะห์แอดมิน</button>
-      <!-- 📊 แท็บ: วิเคราะห์แอดมิน -->
-      <div id="adminAnalysisTab" class="tab-content">
-        <div style="background:#0f172a; padding:16px; border-radius:12px; border:1px solid var(--border-color); margin-bottom:16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-            <div>
-              <h3 style="margin:0 0 6px 0; color:var(--text-main); font-size:16px;">📊 วิเคราะห์ผลงานแอดมิน</h3>
-              <div id="adminAnalysisDateLabel" style="font-size:12px; color:var(--text-muted);">ช่วงวันที่: -</div>
-            </div>
-            <button class="btn-success" type="button" onclick="refreshAdminAnalysisTab_()">🔄 รีเฟรชการวิเคราะห์</button>
-          </div>
-        </div>
-
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <span class="kpi-card-title">👥 จำนวนแอดมิน</span>
-            <span class="kpi-card-value" id="adminAnalysisKpiAdmins">0</span>
-            <span style="font-size:11px;color:var(--text-muted);">นับจากแอดมินที่มีสาขารับผิดชอบ</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-card-title">💬 ข้อความรวม</span>
-            <span class="kpi-card-value" id="adminAnalysisKpiMessages">0</span>
-            <span style="font-size:11px;color:var(--text-muted);">รวมข้อความจากทุกสาขาที่รับผิดชอบ</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-card-title">📞 จำนวนเบอร์รวม</span>
-            <span class="kpi-card-value" id="adminAnalysisKpiPhones">0</span>
-            <span style="font-size:11px;color:var(--text-muted);">อิงข้อมูลชีทกลางช่วงวันที่เดียวกัน</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-card-title">🎯 % ได้เบอร์รวม</span>
-            <span class="kpi-card-value" id="adminAnalysisKpiPhoneRate">0%</span>
-            <span style="font-size:11px;color:var(--text-muted);">จำนวนเบอร์ ÷ ข้อความ</span>
-          </div>
-        </div>
-
-        <div class="table-responsive" style="max-height:none; overflow-y:visible;">
-          <table class="styled-report-table">
-            <thead>
-              <tr>
-                <th style="width:60px;">ลำดับ</th>
-                <th style="min-width:130px;">แอดมิน</th>
-                <th style="min-width:240px;">สาขาที่รับผิดชอบ</th>
-                <th style="width:95px;">ข้อความ</th>
-                <th style="width:95px;">เบอร์</th>
-                <th style="width:105px;">% ได้เบอร์</th>
-                <th style="width:115px;">เงินที่ใช้</th>
-                <th style="width:115px;">บาท/ข้อความ</th>
-                <th style="width:115px;">บาท/เบอร์</th>
-                <th style="width:90px;">จอง</th>
-                <th style="width:90px;">ปล่อย</th>
-              </tr>
-            </thead>
-            <tbody id="adminAnalysisTableBody">
-              <tr><td class="empty-row" colspan="11">กำลังเตรียมข้อมูลวิเคราะห์แอดมิน...</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div style="margin-top:12px; padding:10px 12px; border:1px solid var(--border-color); border-radius:10px; background:#0f172a; color:var(--text-muted); font-size:11px; line-height:1.6;">
-          ℹ️ หน้านี้สรุปจากข้อมูลชุดเดียวกับแท็บ “สรุปแอดข้อความ/เงิน” แล้วรวมตามชื่อแอดมิน โดยชื่อรูปแบบ “ชื่อ/เก็บข้อมูล” จะรวมเป็นแอดมินชื่อหลักเดียวกัน
-        </div>
-      </div>
       <!-- 🚗 แท็บ: ยอดปล่อย / จอง -->
       <button class="tab-btn" onclick="switchTab('bookingDeliveryTab')">🚗 ยอดปล่อย / จอง</button>
       <button class="tab-btn" onclick="switchTab('importBookingDeliveryTab')">📥 นำเข้าข้อมูล จอง / ปล่อย</button>
@@ -2288,6 +2226,68 @@ function auditPopupFlow(step, data){
         </div>
       </div>
 
+      <!-- 📊 แท็บ: วิเคราะห์แอดมิน -->
+      <div id="adminAnalysisTab" class="tab-content">
+        <div style="background:#0f172a; padding:16px; border-radius:12px; border:1px solid var(--border-color); margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0 0 6px 0; color:var(--text-main); font-size:16px;">📊 วิเคราะห์ผลงานแอดมิน</h3>
+              <div id="adminAnalysisDateLabel" style="font-size:12px; color:var(--text-muted);">ช่วงวันที่: -</div>
+            </div>
+            <button class="btn-success" type="button" onclick="refreshAdminAnalysisTab_()">🔄 รีเฟรชการวิเคราะห์</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-card-title">👥 จำนวนแอดมิน</span>
+            <span class="kpi-card-value" id="adminAnalysisKpiAdmins">0</span>
+            <span style="font-size:11px;color:var(--text-muted);">นับจากแอดมินที่มีสาขารับผิดชอบ</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-card-title">💬 ข้อความรวม</span>
+            <span class="kpi-card-value" id="adminAnalysisKpiMessages">0</span>
+            <span style="font-size:11px;color:var(--text-muted);">รวมข้อความจากทุกสาขาที่รับผิดชอบ</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-card-title">📞 จำนวนเบอร์รวม</span>
+            <span class="kpi-card-value" id="adminAnalysisKpiPhones">0</span>
+            <span style="font-size:11px;color:var(--text-muted);">อิงข้อมูลชีทกลางช่วงวันที่เดียวกัน</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-card-title">🎯 % ได้เบอร์รวม</span>
+            <span class="kpi-card-value" id="adminAnalysisKpiPhoneRate">0%</span>
+            <span style="font-size:11px;color:var(--text-muted);">จำนวนเบอร์ ÷ ข้อความ</span>
+          </div>
+        </div>
+
+        <div class="table-responsive" style="max-height:none; overflow-y:visible;">
+          <table class="styled-report-table">
+            <thead>
+              <tr>
+                <th style="width:60px;">ลำดับ</th>
+                <th style="min-width:130px;">แอดมิน</th>
+                <th style="min-width:240px;">สาขาที่รับผิดชอบ</th>
+                <th style="width:95px;">ข้อความ</th>
+                <th style="width:95px;">เบอร์</th>
+                <th style="width:105px;">% ได้เบอร์</th>
+                <th style="width:115px;">เงินที่ใช้</th>
+                <th style="width:115px;">บาท/ข้อความ</th>
+                <th style="width:115px;">บาท/เบอร์</th>
+                <th style="width:90px;">จอง</th>
+                <th style="width:90px;">ปล่อย</th>
+              </tr>
+            </thead>
+            <tbody id="adminAnalysisTableBody">
+              <tr><td class="empty-row" colspan="11">กำลังเตรียมข้อมูลวิเคราะห์แอดมิน...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:12px; padding:10px 12px; border:1px solid var(--border-color); border-radius:10px; background:#0f172a; color:var(--text-muted); font-size:11px; line-height:1.6;">
+          ℹ️ หน้านี้สรุปจากข้อมูลชุดเดียวกับแท็บ “สรุปแอดข้อความ/เงิน” แล้วรวมตามชื่อแอดมิน โดยชื่อรูปแบบ “ชื่อ/เก็บข้อมูล” จะรวมเป็นแอดมินชื่อหลักเดียวกัน
+        </div>
+      </div>
       <!-- 🚗 แท็บ: ยอดปล่อย / จอง (RESET: รอกำหนด Source Mapping ใหม่) -->
       <div id="bookingDeliveryTab" class="tab-content">
         <div style="background: #0f172a; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;">
@@ -9469,7 +9469,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-18.1";
+  const SITE_BUILD_VERSION = "2026-09-18.2";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
