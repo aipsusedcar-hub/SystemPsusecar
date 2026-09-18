@@ -1680,7 +1680,7 @@
     }
 
     @media (min-width: 1024px) {
-      .app-layout { grid-template-columns: 244px minmax(0, 1fr); }
+      .app-layout { grid-template-columns: 210px minmax(0, 1fr); gap: 16px; }
       .nav-tabs { top: 18px; max-height: calc(100vh - 36px); overflow-y: auto; }
     }
 
@@ -9469,7 +9469,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-18.2";
+  const SITE_BUILD_VERSION = "2026-09-18.3";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
