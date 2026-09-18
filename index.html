@@ -7412,9 +7412,15 @@ let endIso = "";
 
     buildCurrentConfigs();
     const hasAllGids = CURRENT_CONFIGS.length > 0 && CURRENT_CONFIGS.every(cfg => !!cfg.gid);
-    if (hasAllGids) return true;
-
-    const results = await fetchMonthlyGidsForManager_(selectedMonth);
+    // ตรวจ GID สดทุกครั้ง เพื่อไม่ให้ผู้ใช้ยังอ่านแท็บเก่าหลังผู้พัฒนาเปลี่ยน GID
+    let results = [];
+    try {
+      results = await fetchMonthlyGidsForManager_(selectedMonth);
+    } catch (error) {
+      console.warn("Unable to refresh monthly GIDs; using the saved values.", error);
+      return hasAllGids;
+    }
+    if (!Array.isArray(results) || !results.length) return hasAllGids;
     if (!MONTHLY_GID_DATABASE[selectedMonth]) MONTHLY_GID_DATABASE[selectedMonth] = { mainGid: "", branches: {} };
     if (!MONTHLY_GID_DATABASE[selectedMonth].branches) MONTHLY_GID_DATABASE[selectedMonth].branches = {};
 
@@ -9478,7 +9484,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-18.7";
+  const SITE_BUILD_VERSION = "2026-09-18.9";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
