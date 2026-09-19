@@ -2903,9 +2903,9 @@ function auditPopupFlow(step, data){
           <h3>📑 สรุปยอดข้อความ / เงิน</h3>
           <div class="date-range-picker" id="adsDatePickerContainer">
             <span>จาก:</span>
-            <input type="date" id="adsReceiptStartDate" value="2026-09-03" onchange="generateAdsReceiptContent()">
+            <input type="date" id="adsReceiptStartDate" value="2026-09-03" onchange="handleAdsReceiptDateChange()">
             <span>ถึง:</span>
-            <input type="date" id="adsReceiptEndDate" value="2026-09-03" onchange="generateAdsReceiptContent()">
+            <input type="date" id="adsReceiptEndDate" value="2026-09-03" onchange="handleAdsReceiptDateChange()">
           </div>
           <div id="adsDateDisplayBadge" class="date-display-badge">
             จาก: <span id="textAdsStartDate"></span> &nbsp;|&nbsp; ถึง: <span id="textAdsEndDate"></span>
@@ -5274,6 +5274,29 @@ let endIso = "";
         modalBox.classList.remove("ads-fit-compact", "ads-fit-tight");
       }
     }
+  }
+
+  async function handleAdsReceiptDateChange() {
+    const start = document.getElementById("adsReceiptStartDate")?.value || "";
+    const end = document.getElementById("adsReceiptEndDate")?.value || "";
+    if (!start || !end || start > end) {
+      generateAdsReceiptContent();
+      return;
+    }
+
+    // ป๊อปอัปใช้ตัวกรองเดียวกับข้อมูล Master เพื่อให้ยอดปล่อยตรงกับวันที่เลือก
+    const mainStart = document.getElementById("dateFilter");
+    const mainEnd = document.getElementById("dateEndFilter");
+    if (mainStart) mainStart.value = start;
+    if (mainEnd) mainEnd.value = end;
+
+    const summaryBody = document.getElementById("adsReceiptTableBody");
+    const detailBody = document.getElementById("adsDetailReceiptTableBody");
+    if (summaryBody) summaryBody.innerHTML = '<tr><td class="empty-row" colspan="8">กำลังโหลดข้อมูลจอง / ปล่อย...</td></tr>';
+    if (detailBody) detailBody.innerHTML = '<tr><td class="empty-row" colspan="9">กำลังโหลดข้อมูลจอง / ปล่อย...</td></tr>';
+
+    await fetchAdsMasterDailyBookingDelivery({ force: true });
+    generateAdsReceiptContent();
   }
 
   function handleAdsBackdropClick(event) {
@@ -9501,7 +9524,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-19.2";
+  const SITE_BUILD_VERSION = "2026-09-19.3";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
