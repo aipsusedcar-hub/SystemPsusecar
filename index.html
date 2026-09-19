@@ -3625,6 +3625,8 @@ let endIso = "";
   // 🚗 ข้อมูลและสถานะการโหลดของชีท จอง / ปล่อย
   let rawBookingRows = [];
   let rawDeliveryRows = [];
+  // ยอดปล่อยรายวันจาก Summary_Delivery_Daily สำหรับป๊อปอัปสรุปแอด
+  let rawDeliveryDailyRows = [];
   let bookingDeliverySourceNotice = "";
   // Bump the cache key after source reconciliation so old partial booking snapshots are not reused.
   const BOOKING_DELIVERY_CACHE_KEY = "ps_booking_delivery_snapshot_v2";
@@ -4100,7 +4102,8 @@ let endIso = "";
         owner: sessionStorage.getItem("ps_logged_user") || "",
         sourceNotice: bookingDeliverySourceNotice,
         bookingRows: rawBookingRows,
-        deliveryRows: rawDeliveryRows
+        deliveryRows: rawDeliveryRows,
+        deliveryDailyRows: rawDeliveryDailyRows
       }));
     } catch (error) {
       // quota อาจเต็มเมื่อ snapshot ใหญ่เกินไป; ใช้งานจาก network ตามปกติได้
@@ -4121,6 +4124,7 @@ let endIso = "";
 
       rawBookingRows = cached.bookingRows;
       rawDeliveryRows = cached.deliveryRows;
+      rawDeliveryDailyRows = Array.isArray(cached.deliveryDailyRows) ? cached.deliveryDailyRows : [];
       bookingDeliverySourceNotice = cleanText(cached.sourceNotice || "");
       bookingHeaders = ["วันที่จอง", "ทีมสาขา", "ทราบข่าว", "ยอดจอง"];
       deliveryHeaders = ["เดือนคอม", "ทีมสาขา", "ทราบข่าว", "ยอดปล่อย"];
@@ -4186,7 +4190,7 @@ let endIso = "";
           action: "getBookingDeliverySummarySheets",
           schemaVersion: "3",
           token: String(token || ""),
-          includeDeliveryDailyRows: "false",
+          includeDeliveryDailyRows: "true",
           t: String(Date.now())
         });
         const summaryApiUrl = `${BOOKING_IMPORT_GAS_URL}?${summaryParams.toString()}`;
@@ -4214,6 +4218,7 @@ let endIso = "";
 
         rawBookingRows = Array.isArray(data.bookingRows) ? data.bookingRows : [];
         rawDeliveryRows = Array.isArray(data.deliveryRows) ? data.deliveryRows : [];
+        rawDeliveryDailyRows = Array.isArray(data.deliveryDailyRows) ? data.deliveryDailyRows : [];
         bookingHeaders = ["วันที่จอง", "ทีมสาขา", "ทราบข่าว", "ยอดจอง"];
         deliveryHeaders = ["เดือนคอม", "ทีมสาขา", "ทราบข่าว", "ยอดปล่อย"];
         bookingBranchIndex = 1;
@@ -5002,6 +5007,10 @@ let endIso = "";
     const monthIso = `${match[1]}-${match[2]}`;
 
     await fetchBookingDeliveryData({ preserveRenderedData: true });
+    // แคชรุ่นเก่าไม่มีข้อมูลรายวัน จึงขอข้อมูลใหม่หนึ่งครั้งก่อนใช้
+    if (!Array.isArray(rawDeliveryDailyRows) || rawDeliveryDailyRows.length === 0) {
+      await fetchBookingDeliveryData({ preserveRenderedData: true, force: true });
+    }
     if (!isBookingDeliveryLoaded || bookingDeliverySourceNotice) return false;
     syncBookingDeliveryFiltersToGlobalMonth_({ render: false });
 
@@ -5011,15 +5020,21 @@ let endIso = "";
       const rowDate = normalizeDateToISO(row[0]);
       return rowDate >= startIso && rowDate <= endIso;
     });
-    const deliveryRows = (rawDeliveryRows || []).filter(row =>
-      row && row.length >= 4 && isCompanyPageValue(row[2]) &&
-      (commissionValueMatchesMonth_(row[0], monthIso) || normalizeCommissionValue(row[0]) === normalizeCommissionValue(commissionMonth))
-    );
+    const hasDailyDeliverySource = Array.isArray(rawDeliveryDailyRows) && rawDeliveryDailyRows.length > 0;
+    const deliveryRows = hasDailyDeliverySource
+      ? rawDeliveryDailyRows.filter(row => {
+          if (!row || row.length < 4 || !isCompanyPageValue(row[2])) return false;
+          const rowDate = normalizeDateToISO(row[0]);
+          return rowDate >= startIso && rowDate <= endIso;
+        })
+      : (rawDeliveryRows || []).filter(row =>
+          row && row.length >= 4 && isCompanyPageValue(row[2]) &&
+          (commissionValueMatchesMonth_(row[0], monthIso) || normalizeCommissionValue(row[0]) === normalizeCommissionValue(commissionMonth))
+        );
 
-    // ปรับแถวรายเดือนให้เป็นรูปแบบรายวันของตัวแสดงผล เพื่อให้ยอดจากสองแท็บ
-    // คำนวณจาก Summary_Booking_Daily และ Commission_Close_Current ชุดเดียวกัน
+    // ยอดปล่อยใช้ Summary_Delivery_Daily ตามวันที่เลือก; ใช้ยอดรายเดือนเมื่อชีตรายวันยังว่าง
     adsMasterBookingDailyRows = bookingRows.map(row => [normalizeDateToISO(row[0]), row[1], row[2], row[3]]);
-    adsMasterDeliveryDailyRows = deliveryRows.map(row => [startIso, row[1], row[2], row[3]]);
+    adsMasterDeliveryDailyRows = deliveryRows.map(row => [hasDailyDeliverySource ? normalizeDateToISO(row[0]) : startIso, row[1], row[2], row[3]]);
     adsLegacyBookingDailyRows = adsMasterBookingDailyRows;
     adsLegacyDeliveryDailyRows = adsMasterDeliveryDailyRows;
     adsMasterDailyLoadedDate = rangeKey;
@@ -9524,7 +9539,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-19.3";
+  const SITE_BUILD_VERSION = "2026-09-19.4";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
