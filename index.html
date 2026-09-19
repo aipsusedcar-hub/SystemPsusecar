@@ -5258,7 +5258,8 @@ let endIso = "";
       document.getElementById("adsReceiptEndDate").value = end;
 
       box.style.display = "flex";
-      if (!isAdsMasterDailyLoaded || adsMasterDailyLoadedDate !== start) {
+      const rangeKey = start + "|" + end;
+      if (!isAdsMasterDailyLoaded || adsMasterDailyLoadedDate !== rangeKey) {
         await fetchAdsMasterDailyBookingDelivery();
       }
       generateAdsReceiptContent();
@@ -5347,13 +5348,12 @@ let endIso = "";
   // V29.4 Popup only: Booking / Delivery from Master
   function getPopupBookingDeliveryCount(branchName, startIso, endIso) {
     const target = normalizeAdsMasterBranchKey(branchName);
-    const selectedIso = document.getElementById("dateFilter")?.value || "";
-    const isSelectedSingleDay = startIso === endIso && startIso === selectedIso;
+    const rangeKey = startIso + "|" + endIso;
 
-    // รายงานวันเดียวต้องใช้ข้อมูล Master รายวัน เพื่อให้ยอดจอง/ปล่อยตรงกับหน้าสรุปแอด
-    if (isSelectedSingleDay && isAdsMasterDailyLoaded && adsMasterDailyLoadedDate === selectedIso) {
-      const bookingPack = buildAdsMasterDailyMap(adsMasterBookingDailyRows, selectedIso);
-      const deliveryPack = buildAdsMasterDailyMap(adsMasterDeliveryDailyRows, selectedIso);
+    // ใช้ข้อมูล Master ที่โหลดสำหรับช่วงวันเดียวกับป๊อปอัปเสมอ
+    if (isAdsMasterDailyLoaded && adsMasterDailyLoadedDate === rangeKey) {
+      const bookingPack = buildAdsMasterDailyMap(adsMasterBookingDailyRows, startIso, endIso);
+      const deliveryPack = buildAdsMasterDailyMap(adsMasterDeliveryDailyRows, startIso, endIso);
       return {
         booking: bookingPack.map.get(target) || 0,
         delivery: deliveryPack.map.get(target) || 0
@@ -9501,7 +9501,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-19.1";
+  const SITE_BUILD_VERSION = "2026-09-19.2";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
