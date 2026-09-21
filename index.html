@@ -4893,7 +4893,8 @@ let endIso = "";
     startAdsBookingDeliveryProgress_(`⏳ กำลังโหลด จอง / ปล่อย วันที่ ${startIso}${startIso === endIso ? "" : ` ถึง ${endIso}`}...`);
 
     try {
-      if (await loadSharedMonthlyAdsBookingDelivery_(startIso, endIso, rangeKey)) return;
+      // ป๊อปอัปต้องให้ Apps Script กรองทั้งวันที่ปล่อยและเดือนคอมจากรายการจริง
+      // Summary_Delivery_Daily ไม่มีเดือนคอม จึงใช้เป็นแหล่งยอดปล่อยในป๊อปอัปไม่ได้
 
       const res = await fetch(BOOKING_IMPORT_GAS_URL, {
         method: "POST",
@@ -9539,7 +9540,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-19.4";
+  const SITE_BUILD_VERSION = "2026-09-21.1";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
