@@ -2455,18 +2455,17 @@ function auditPopupFlow(step, data){
         </div>
         <div class="kpi-grid">
           <div class="kpi-card"><span class="kpi-card-title">👤 เซลล์ที่มีผลงาน</span><span class="kpi-card-value" id="topSalesKpiCount">0</span><span style="font-size:11px;color:var(--text-muted);">นับเฉพาะเพจบริษัท</span></div>
-          <div class="kpi-card"><span class="kpi-card-title">📝 ยอดจองรวม</span><span class="kpi-card-value" id="topSalesKpiBooking">0</span><span style="font-size:11px;color:var(--text-muted);">ช่วงวันที่ที่เลือก</span></div>
           <div class="kpi-card"><span class="kpi-card-title">🔑 ยอดปล่อยรวม</span><span class="kpi-card-value" id="topSalesKpiDelivery">0</span><span style="font-size:11px;color:var(--text-muted);">วันที่ปล่อยและเดือนคอม</span></div>
-          <div class="kpi-card"><span class="kpi-card-title">🏅 อันดับ 1</span><span class="kpi-card-value" id="topSalesKpiLeader" style="font-size:18px;">-</span><span style="font-size:11px;color:var(--text-muted);">เรียงจากจอง + ปล่อย</span></div>
+          <div class="kpi-card"><span class="kpi-card-title">🏅 อันดับ 1</span><span class="kpi-card-value" id="topSalesKpiLeader" style="font-size:18px;">-</span><span style="font-size:11px;color:var(--text-muted);">เรียงจากยอดปล่อย</span></div>
         </div>
         <div class="table-responsive" style="max-height:none; overflow-y:visible;">
           <table class="styled-report-table">
-            <thead><tr><th style="width:80px;">อันดับ</th><th style="min-width:180px;">เซลล์</th><th style="min-width:260px;">สาขา</th><th style="width:110px;">ยอดจอง</th><th style="width:110px;">ยอดปล่อย</th><th style="width:110px;">รวม</th></tr></thead>
-            <tbody id="topSalesTableBody"><tr><td class="empty-row" colspan="6">กดรีเฟรชเพื่อโหลดอันดับเซลล์</td></tr></tbody>
+            <thead><tr><th style="width:80px;">อันดับ</th><th style="min-width:180px;">เซลล์</th><th style="min-width:260px;">สาขา</th><th style="width:130px;">ยอดปล่อย</th></tr></thead>
+            <tbody id="topSalesTableBody"><tr><td class="empty-row" colspan="4">กดรีเฟรชเพื่อโหลดอันดับเซลล์</td></tr></tbody>
           </table>
         </div>
         <div style="margin-top:12px; padding:10px 12px; border:1px solid var(--border-color); border-radius:10px; background:#0f172a; color:var(--text-muted); font-size:11px; line-height:1.6;">
-          ℹ️ ยอดจองใช้วันจองและรายการล่าสุด ส่วนยอดปล่อยใช้วันที่ปล่อย พร้อมกรองเดือนคอมในช่วงวันที่เดียวกัน
+          ℹ️ จัดอันดับจากยอดปล่อยเท่านั้น โดยใช้วันที่ปล่อยและกรองเดือนคอมในช่วงวันที่เลือก
         </div>
       </div>
 
@@ -6874,8 +6873,8 @@ let endIso = "";
     const range = getMainDateRange();
     const label = document.getElementById("topSalesDateLabel");
     if (label) label.textContent = `ช่วงวันที่: ${formatDisplayDateTH(range.start)} - ${formatDisplayDateTH(range.end)}`;
-    if (!token) { if (body) body.innerHTML = '<tr><td class="empty-row" colspan="6">กรุณาเข้าสู่ระบบก่อนโหลดอันดับเซลล์</td></tr>'; return; }
-    if (body) body.innerHTML = '<tr><td class="empty-row" colspan="6">⏳ กำลังโหลดอันดับเซลล์...</td></tr>';
+    if (!token) { if (body) body.innerHTML = '<tr><td class="empty-row" colspan="4">กรุณาเข้าสู่ระบบก่อนโหลดอันดับเซลล์</td></tr>'; return; }
+    if (body) body.innerHTML = '<tr><td class="empty-row" colspan="4">⏳ กำลังโหลดอันดับเซลล์...</td></tr>';
     try {
       const response = await fetch(BOOKING_IMPORT_GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "getTopSalesBookingDelivery", token, startDate: range.start, endDate: range.end }), redirect: "follow", cache: "no-store", referrerPolicy: "no-referrer" });
       const text = await response.text();
@@ -6884,29 +6883,25 @@ let endIso = "";
       topSalesRows_ = Array.isArray(data.rows) ? data.rows : [];
       renderTopSalesTab_();
     } catch (error) {
-      if (body) body.innerHTML = `<tr><td class="empty-row" colspan="6" style="color:var(--danger);">❌ ${escapeSecurityHtml(error?.message || "โหลดอันดับเซลล์ไม่สำเร็จ")}</td></tr>`;
+      if (body) body.innerHTML = `<tr><td class="empty-row" colspan="4" style="color:var(--danger);">❌ ${escapeSecurityHtml(error?.message || "โหลดอันดับเซลล์ไม่สำเร็จ")}</td></tr>`;
     }
   }
 
   function renderTopSalesTab_() {
-    const rows = topSalesRows_;
+    const rows = topSalesRows_.filter(row => Number(row.delivery || 0) > 0).sort((a, b) => Number(b.delivery || 0) - Number(a.delivery || 0));
     const body = document.getElementById("topSalesTableBody");
-    const totalBooking = rows.reduce((sum, row) => sum + Number(row.booking || 0), 0);
     const totalDelivery = rows.reduce((sum, row) => sum + Number(row.delivery || 0), 0);
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
     set("topSalesKpiCount", rows.length.toLocaleString());
-    set("topSalesKpiBooking", totalBooking.toLocaleString());
     set("topSalesKpiDelivery", totalDelivery.toLocaleString());
     set("topSalesKpiLeader", rows[0]?.seller || "-");
     if (!body) return;
-    if (!rows.length) { body.innerHTML = '<tr><td class="empty-row" colspan="6">ไม่พบยอดจองหรือปล่อยของเซลล์ในช่วงวันที่เลือก</td></tr>'; return; }
+    if (!rows.length) { body.innerHTML = '<tr><td class="empty-row" colspan="4">ไม่พบยอดปล่อยของเซลล์ในช่วงวันที่เลือก</td></tr>'; return; }
     body.innerHTML = rows.map((row, index) => `<tr>
       <td style="text-align:center;font-weight:800;color:${index < 3 ? '#f97316' : 'var(--text-muted)'};">${index + 1}</td>
       <td style="font-weight:800;">${escapeSecurityHtml(row.seller || "ไม่ระบุ")}</td>
       <td>${escapeSecurityHtml(row.branches || "-")}</td>
-      <td style="text-align:center;color:#38bdf8;font-weight:800;">${Number(row.booking || 0).toLocaleString()}</td>
       <td style="text-align:center;color:#34d399;font-weight:800;">${Number(row.delivery || 0).toLocaleString()}</td>
-      <td style="text-align:center;font-weight:900;">${Number(row.total || 0).toLocaleString()}</td>
     </tr>`).join("");
   }
 
