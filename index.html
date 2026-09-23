@@ -2079,11 +2079,11 @@ function auditPopupFlow(step, data){
       <button class="tab-btn" onclick="switchTab('adminAnalysisTab')">📊 วิเคราะห์แอดมิน</button>
       <!-- 🚗 แท็บ: ยอดปล่อย / จอง -->
       <button class="tab-btn" onclick="switchTab('bookingDeliveryTab')">🚗 ยอดปล่อย / จอง</button>
-      <button class="tab-btn" onclick="switchTab('topSalesTab')">🏆 Top เซลล์</button>
       <button class="tab-btn" onclick="switchTab('importBookingDeliveryTab')">📥 นำเข้าข้อมูล จอง / ปล่อย</button>
       <button class="tab-btn" id="tabBtnNight" onclick="switchTab('nightMessageTab')">🌙 ข้อความกลางคืน</button>
       <button class="tab-btn" onclick="switchTab('gidManagerTab')">⚙️ จัดการ GID รายเดือน</button>
       <button class="tab-btn" onclick="switchTab('monthlyChartTab')">📊 กราฟเปรียบเทียบยอดข้อความ</button>
+      <button class="tab-btn" onclick="switchTab('topSalesTab')">🏆 Top เซลล์</button>
     </div>
 
     <div style="min-width: 0; width: 100%;">
@@ -7011,21 +7011,21 @@ let endIso = "";
         if (!restoreBookingDeliveryFilters_()) syncBookingDeliveryFiltersToMainRange_({ render: false });
         renderBookingDeliveryTab();
       } else if (tabId === "topSalesTab") {
-        document.querySelectorAll(".tab-btn")[6].classList.add("active");
+        document.querySelectorAll(".tab-btn")[10].classList.add("active");
         document.getElementById("topSalesTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "flex";
         if (statusBar) statusBar.style.display = "flex";
         filterSpan.style.display = "none";
         void refreshTopSalesTab_();
       } else if (tabId === "importBookingDeliveryTab") {
-        document.querySelectorAll(".tab-btn")[7].classList.add("active");
+        document.querySelectorAll(".tab-btn")[6].classList.add("active");
         document.getElementById("importBookingDeliveryTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "none";
         if (statusBar) statusBar.style.display = "none";
         filterSpan.style.display = "none";
         loadBookingDeliveryImportHistory();
       } else if (tabId === "nightMessageTab") {
-        document.querySelectorAll(".tab-btn")[8].classList.add("active");
+        document.querySelectorAll(".tab-btn")[7].classList.add("active");
         document.getElementById("nightMessageTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "flex";
         if (statusBar) statusBar.style.display = "flex";
@@ -7033,7 +7033,7 @@ let endIso = "";
         updateProgress(100, `🌙 โหมดข้อความกลางคืน ประจำเดือน ${monthText}`);
         renderNightMessageTable();
       } else if (tabId === "gidManagerTab") {
-        document.querySelectorAll(".tab-btn")[9].classList.add("active");
+        document.querySelectorAll(".tab-btn")[8].classList.add("active");
         document.getElementById("gidManagerTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "none";
         if (statusBar) statusBar.style.display = "flex";
@@ -7045,7 +7045,7 @@ let endIso = "";
         // ลด false fail / request ซ้ำ / การเขียนทับสถานะสีเขียว
         renderGidManagerTable();
       } else if (tabId === "monthlyChartTab") {
-        document.querySelectorAll(".tab-btn")[10].classList.add("active");
+        document.querySelectorAll(".tab-btn")[9].classList.add("active");
         document.getElementById("monthlyChartTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "none";
         if (statusBar) statusBar.style.display = "none";
@@ -9627,7 +9627,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-23.2";
+  const SITE_BUILD_VERSION = "2026-09-23.3";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
