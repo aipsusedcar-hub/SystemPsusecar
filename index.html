@@ -4646,6 +4646,15 @@ let endIso = "";
     }
   });
 
+  // ค่าใน Google Sheets อาจถูกส่งเป็นข้อความที่มีลูกน้ำ เช่น "1,321.12"
+  // Number/parseFloat จะอ่านได้เพียง 1 จึงต้องเอาตัวคั่นหลักพันออกก่อน
+  function parseAdsNumericValue(raw) {
+    if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
+    const normalized = String(raw ?? "").replace(/[^0-9.\-]/g, "");
+    const value = Number(normalized);
+    return Number.isFinite(value) ? value : 0;
+  }
+
   function normalizeDateToISO(raw) {
     if (!raw) return "";
     const str = raw.toString().trim();
@@ -5144,8 +5153,8 @@ let endIso = "";
               }
 
               if (isMatchBranch) {
-                messages += parseFloat(row[3]) || 0;
-                money += parseFloat(row[4]) || 0;
+                messages += parseAdsNumericValue(row[3]);
+                money += parseAdsNumericValue(row[4]);
               }
             }
           }
@@ -5493,8 +5502,8 @@ let endIso = "";
               }
 
               if (isMatch) {
-                messages += parseFloat(row[3]) || 0;
-                money += parseFloat(row[4]) || 0;
+                messages += parseAdsNumericValue(row[3]);
+                money += parseAdsNumericValue(row[4]);
               }
             }
           }
@@ -9540,7 +9549,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-21.1";
+  const SITE_BUILD_VERSION = "2026-09-23.1";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
