@@ -5949,10 +5949,19 @@ let endIso = "";
 
   async function loadSharedGidConfigs_() {
     if (!supabaseAuthClient_) return false;
-    const { data, error } = await supabaseAuthClient_
-      .from(GID_CONFIG_TABLE)
-      .select("month_key, config");
-    if (error) throw new Error(error.message || "อ่าน GID กลางไม่สำเร็จ");
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    let result;
+    try {
+      result = await supabaseAuthClient_
+        .from(GID_CONFIG_TABLE)
+        .select("month_key, config")
+        .abortSignal(controller.signal);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    const { data, error } = result || {};
+    if (error) throw new Error(error.name === "AbortError" ? "Supabase ตอบช้า ใช้ GID ที่บันทึกไว้ในเครื่อง" : (error.message || "อ่าน GID กลางไม่สำเร็จ"));
 
     (data || []).forEach(row => {
       const monthKey = cleanText(row?.month_key);
