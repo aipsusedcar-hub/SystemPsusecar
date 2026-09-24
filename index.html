@@ -4287,7 +4287,7 @@ let endIso = "";
         // Apps Script รายงานนี้อ่านหลายชีตและตอบกลับจริงราว 16–18 วินาที
         // จึงต้องเผื่อเวลาให้มากกว่าการโหลด GID ปกติ ไม่เช่นนั้นจะแสดง error
         // ทั้งที่ backend กำลังจะตอบข้อมูลกลับมา
-        const data = await fetchGidJsonp_(summaryApiUrl, 25000);
+        const data = await fetchGidJsonp_(summaryApiUrl, 60000);
         if (!data || !data.success) throw new Error(data?.message || "อ่าน Summary Sheets ไม่สำเร็จ");
 
         // Schema ปัจจุบันยืนยันแหล่งยอดปล่อยผ่าน meta.deliverySheet; ข้อความ source
@@ -9733,7 +9733,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-24.10";
+  const SITE_BUILD_VERSION = "2026-09-24.11";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
