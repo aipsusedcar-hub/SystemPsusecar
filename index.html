@@ -3577,12 +3577,11 @@ let endIso = "";
     }
     const savedName = sessionStorage.getItem("ps_user_name") || "แอดมิน";
     const savedRole = sessionStorage.getItem("ps_user_role") || "";
-    try {
-      await loadSharedGidConfigs_();
-    } catch (err) {
-      // ใช้ค่าในเครื่องชั่วคราวได้หาก Supabase ขัดข้อง แต่จะแจ้งใน console เพื่อตรวจสอบต่อ
+    // แสดงหน้าแดชบอร์ดจากค่า GID ที่บันทึกไว้ก่อน แล้วซิงก์ค่ากลางเบื้องหลัง
+    // เพื่อไม่ให้การ Login ค้างเพราะ Supabase ตอบช้า
+    void loadSharedGidConfigs_().catch(err => {
       console.warn("Shared GID configuration is unavailable:", err);
-    }
+    });
     showDashboard(savedName, savedRole);
     fetchAllData();
   }
