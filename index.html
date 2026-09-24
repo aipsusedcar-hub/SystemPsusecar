@@ -4214,7 +4214,9 @@ let endIso = "";
       script.onerror = () => finish({ ok: false, rows: [] });
       const timer = setTimeout(() => finish({ ok: false, rows: [] }), 12000);
       const separator = url.includes("?") ? "&" : "?";
-      script.src = `${url}${separator}tqx=${encodeURIComponent(`responseHandler:${callbackName}`)}&_=${Date.now()}`;
+      // ใช้รูปแบบเดียวกับตัวอ่าน gviz อื่นในหน้าเว็บ เพราะบางเบราว์เซอร์
+      // ไม่เรียก callback เมื่อค่า tqx ถูก encode ทั้งก้อน
+      script.src = `${url}${separator}tqx=responseHandler:${callbackName}&_=${Date.now()}`;
       document.head.appendChild(script);
     });
     const values = row => (row?.c || []).map(cell => {
