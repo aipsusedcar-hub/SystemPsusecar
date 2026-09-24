@@ -4248,13 +4248,14 @@ let endIso = "";
     });
   }
 
-  async function fetchBookingDeliveryData({ preserveRenderedData = false, force = false } = {}) {
+  async function fetchBookingDeliveryData({ preserveRenderedData = false, force = false, includeDeliveryDailyRows = false } = {}) {
     const token = sessionStorage.getItem("ps_auth_token") || "";
     // จำสถานะก่อนเริ่มโหลด: ถ้าผู้ใช้เปลี่ยนตัวกรองระหว่างรอข้อมูล
     // จะต้องไม่กู้ค่าที่บันทึกไว้เดิมกลับมาทับภายหลัง
     const mayRestoreSavedFilters = !bookingDeliveryFiltersTouched;
     if (bookingDeliveryLoadPromise) return bookingDeliveryLoadPromise;
-    if (!force && isBookingDeliveryLoaded && rawBookingRows.length && rawDeliveryRows.length) {
+    if (!force && isBookingDeliveryLoaded && rawBookingRows.length && rawDeliveryRows.length &&
+      (!includeDeliveryDailyRows || rawDeliveryDailyRows.length)) {
       return Promise.resolve(true);
     }
 
@@ -4277,7 +4278,7 @@ let endIso = "";
           action: "getBookingDeliverySummarySheets",
           schemaVersion: "3",
           token: String(token || ""),
-          includeDeliveryDailyRows: "true",
+          includeDeliveryDailyRows: includeDeliveryDailyRows ? "true" : "false",
           t: String(Date.now())
         });
         const summaryApiUrl = `${BOOKING_IMPORT_GAS_URL}?${summaryParams.toString()}`;
@@ -4305,7 +4306,7 @@ let endIso = "";
 
         rawBookingRows = Array.isArray(data.bookingRows) ? data.bookingRows : [];
         rawDeliveryRows = Array.isArray(data.deliveryRows) ? data.deliveryRows : [];
-        rawDeliveryDailyRows = Array.isArray(data.deliveryDailyRows) ? data.deliveryDailyRows : [];
+          rawDeliveryDailyRows = Array.isArray(data.deliveryDailyRows) ? data.deliveryDailyRows : [];
         bookingHeaders = ["วันที่จอง", "ทีมสาขา", "ทราบข่าว", "ยอดจอง"];
         deliveryHeaders = ["เดือนคอม", "ทีมสาขา", "ทราบข่าว", "ยอดปล่อย"];
         bookingBranchIndex = 1;
@@ -4333,7 +4334,7 @@ let endIso = "";
           const fallback = await fetchBookingDeliveryDirectFallback_();
           rawBookingRows = fallback.bookingRows;
           rawDeliveryRows = fallback.deliveryRows;
-          rawDeliveryDailyRows = [];
+            rawDeliveryDailyRows = [];
           bookingHeaders = ["วันที่จอง", "ทีมสาขา", "ทราบข่าว", "ยอดจอง"];
           deliveryHeaders = ["เดือนคอม", "ทีมสาขา", "ทราบข่าว", "ยอดปล่อย"];
           bookingBranchIndex = 1;
@@ -5124,10 +5125,10 @@ let endIso = "";
     if (!match || !endIso || startIso.slice(0, 7) !== endIso.slice(0, 7)) return false;
     const monthIso = `${match[1]}-${match[2]}`;
 
-    await fetchBookingDeliveryData({ preserveRenderedData: true });
+    await fetchBookingDeliveryData({ preserveRenderedData: true, includeDeliveryDailyRows: true });
     // แคชรุ่นเก่าไม่มีข้อมูลรายวัน จึงขอข้อมูลใหม่หนึ่งครั้งก่อนใช้
     if (!Array.isArray(rawDeliveryDailyRows) || rawDeliveryDailyRows.length === 0) {
-      await fetchBookingDeliveryData({ preserveRenderedData: true, force: true });
+      await fetchBookingDeliveryData({ preserveRenderedData: true, force: true, includeDeliveryDailyRows: true });
     }
     if (!isBookingDeliveryLoaded || bookingDeliverySourceNotice) return false;
     syncBookingDeliveryFiltersToGlobalMonth_({ render: false });
@@ -9727,7 +9728,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-24.7";
+  const SITE_BUILD_VERSION = "2026-09-24.8";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
