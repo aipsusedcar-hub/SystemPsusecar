@@ -9644,7 +9644,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-24.5";
+  const SITE_BUILD_VERSION = "2026-09-24.6";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
@@ -9665,13 +9665,10 @@ let endIso = "";
       if (!response.ok) return;
       const latest = await response.json();
       const latestVersion = String(latest?.version || "").trim();
-      const requestedVersion = new URL(window.location.href).searchParams.get("v") || "";
-      if (!latestVersion || latestVersion === SITE_BUILD_VERSION || requestedVersion === latestVersion) return;
-
-      siteUpdateNavigationStarted_ = true;
-      const nextUrl = new URL(window.location.href);
-      nextUrl.searchParams.set("v", latestVersion);
-      window.location.replace(nextUrl.toString());
+      if (!latestVersion || latestVersion === SITE_BUILD_VERSION) return;
+      // ไม่รีโหลดหน้าอัตโนมัติ เพราะผู้ใช้ต้องการให้รีเฟรชเองแล้วเห็นรุ่นล่าสุด
+      // การรีโหลดอัตโนมัติอาจทำให้หน้าเว็บกระพิบเมื่อไฟล์เก่ายังอยู่ในแคช
+      return;
     } catch (_) {
       // หากเครือข่ายขาดชั่วคราว ให้ใช้งานเวอร์ชันปัจจุบันต่อไป
     }
@@ -9691,8 +9688,6 @@ let endIso = "";
     initBookingDeliveryImportUI();
     initCommissionCloseImportUI();
     document.getElementById("loginForm").addEventListener("submit", attemptLogin_);
-    checkForSiteUpdate_();
-    setInterval(checkForSiteUpdate_, 2 * 60 * 1000);
     startDashboard_();
   });
 </script>
