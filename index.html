@@ -4186,6 +4186,68 @@ let endIso = "";
     return isBookingDeliveryLoaded;
   }
 
+  // Fallback ของรายงานยอดปล่อย / จอง เมื่อ Apps Script ตอบช้า
+  // ใช้ชีตต้นทางเดียวกันโดยตรง เพื่อให้รายงานยังเปิดได้และไม่เปลี่ยนความหมายของยอด
+  function fetchBookingDeliveryDirectFallback_() {
+    const makeUrl = (gid, query) => {
+      const params = new URLSearchParams({
+        gid: String(gid),
+        tq: query
+      });
+      return `https://docs.google.com/spreadsheets/d/${BOOKING_DELIVERY_SHEET_ID}/gviz/tq?${params.toString()}`;
+    };
+    const read = (url, callbackName) => new Promise(resolve => {
+      const script = document.createElement("script");
+      let done = false;
+      const finish = value => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try { script.remove(); } catch (_) {}
+        try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+        resolve(value);
+      };
+      window[callbackName] = json => {
+        const table = json && json.table;
+        finish(table ? { ok: true, rows: table.rows || [] } : { ok: false, rows: [] });
+      };
+      script.onerror = () => finish({ ok: false, rows: [] });
+      const timer = setTimeout(() => finish({ ok: false, rows: [] }), 12000);
+      const separator = url.includes("?") ? "&" : "?";
+      script.src = `${url}${separator}tqx=${encodeURIComponent(`responseHandler:${callbackName}`)}&_=${Date.now()}`;
+      document.head.appendChild(script);
+    });
+    const values = row => (row?.c || []).map(cell => {
+      if (!cell) return "";
+      return cell.f !== undefined && cell.f !== null ? String(cell.f).trim() : String(cell.v ?? "").trim();
+    });
+
+    return Promise.all([
+      read(makeUrl(300007, "select A,B,C,D"), "cb_direct_booking_delivery_booking"),
+      read(makeUrl(300009, "select A,O,T,AB,E"), "cb_direct_booking_delivery_delivery")
+    ]).then(([booking, delivery]) => {
+      if (!booking.ok || !delivery.ok) throw new Error("อ่านชีตต้นทางโดยตรงไม่สำเร็จ");
+      const bookingRows = booking.rows.map(values).filter(row => row.length >= 4);
+      const deliveryMap = new Map();
+      delivery.rows.map(values).forEach(row => {
+        if (row.length < 5) return;
+        const active = /^(true|จริง|1|yes)$/i.test(cleanText(row[4]));
+        const releaseDate = normalizeDateToISO(row[3]);
+        const month = cleanText(row[0]);
+        const team = cleanText(row[1]);
+        const source = cleanText(row[2]);
+        if (!active || !releaseDate || !month || !team) return;
+        const key = `${month}\u0000${team}\u0000${source}`;
+        deliveryMap.set(key, (deliveryMap.get(key) || 0) + 1);
+      });
+      const deliveryRows = Array.from(deliveryMap.entries()).map(([key, count]) => {
+        const [month, team, source] = key.split("\u0000");
+        return [month, team, source, String(count)];
+      });
+      return { bookingRows, deliveryRows };
+    });
+  }
+
   async function fetchBookingDeliveryData({ preserveRenderedData = false, force = false } = {}) {
     const token = sessionStorage.getItem("ps_auth_token") || "";
     // จำสถานะก่อนเริ่มโหลด: ถ้าผู้ใช้เปลี่ยนตัวกรองระหว่างรอข้อมูล
@@ -4219,7 +4281,7 @@ let endIso = "";
           t: String(Date.now())
         });
         const summaryApiUrl = `${BOOKING_IMPORT_GAS_URL}?${summaryParams.toString()}`;
-        const data = await fetchGidJsonp_(summaryApiUrl);
+        const data = await fetchGidJsonp_(summaryApiUrl, 12000);
         if (!data || !data.success) throw new Error(data?.message || "อ่าน Summary Sheets ไม่สำเร็จ");
 
         // Schema ปัจจุบันยืนยันแหล่งยอดปล่อยผ่าน meta.deliverySheet; ข้อความ source
@@ -4267,6 +4329,27 @@ let endIso = "";
         renderBookingDeliveryTab();
       } catch (err) {
         console.error("Booking/Delivery Summary API load error:", err);
+        try {
+          const fallback = await fetchBookingDeliveryDirectFallback_();
+          rawBookingRows = fallback.bookingRows;
+          rawDeliveryRows = fallback.deliveryRows;
+          rawDeliveryDailyRows = [];
+          bookingHeaders = ["วันที่จอง", "ทีมสาขา", "ทราบข่าว", "ยอดจอง"];
+          deliveryHeaders = ["เดือนคอม", "ทีมสาขา", "ทราบข่าว", "ยอดปล่อย"];
+          bookingBranchIndex = 1;
+          deliveryBranchIndex = 1;
+          bookingDeliverySourceNotice = "⚠️ Apps Script ตอบช้า ระบบจึงอ่านข้อมูลจากชีตต้นทางโดยตรง";
+          isBookingDeliveryLoaded = rawBookingRows.length > 0 || rawDeliveryRows.length > 0;
+          if (isBookingDeliveryLoaded) {
+            saveBookingDeliveryCache_();
+            setDefaultBookingPeriod();
+            populateCommissionMonthDropdown();
+            renderBookingDeliveryTab();
+            return;
+          }
+        } catch (fallbackError) {
+          console.error("Direct booking/delivery fallback failed:", fallbackError);
+        }
         if (!keepCachedRowsVisible) {
           isBookingDeliveryLoaded = false;
         }
@@ -9644,7 +9727,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-24.6";
+  const SITE_BUILD_VERSION = "2026-09-24.7";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
