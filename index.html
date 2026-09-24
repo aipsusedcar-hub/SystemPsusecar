@@ -7584,7 +7584,21 @@ let endIso = "";
   async function fetchAllData() {
     // เมื่อช่วงวันที่อยู่เดือนเดียวกัน ให้ใช้ชีทข้อมูลของเดือนนั้นเสมอ
     syncGlobalMonthToDateRange_();
-    await ensureCurrentMonthGids_();
+    buildCurrentConfigs();
+    const cachedMainGid = CURRENT_CONFIGS.find(cfg => cfg.isMain)?.gid || "";
+    // ตรวจ GID สดเบื้องหลัง แต่ไม่บล็อกการเปิดหน้าเว็บเมื่อ Apps Script ตอบช้า
+    const gidRefreshPromise = ensureCurrentMonthGids_().catch(error => {
+      console.warn("Unable to refresh monthly GIDs; using the saved values.", error);
+      return false;
+    });
+    if (!cachedMainGid) {
+      await gidRefreshPromise;
+    } else {
+      await Promise.race([
+        gidRefreshPromise,
+        new Promise(resolve => setTimeout(resolve, 4000))
+      ]);
+    }
     buildCurrentConfigs();
     const monthText = document.getElementById("globalMonthSelect").options[document.getElementById("globalMonthSelect").selectedIndex].text;
     
