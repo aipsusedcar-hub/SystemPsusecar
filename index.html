@@ -9644,14 +9644,15 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-09-24.4";
+  const SITE_BUILD_VERSION = "2026-09-24.5";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
     const url = new URL(window.location.href);
-    // cb และ v ใช้เพียงครั้งเดียวเพื่อพ้นแคชเก่า จากนั้นกลับมาที่ลิงก์หลักเดียว
+    // cb ใช้เพียงครั้งเดียวเพื่อพ้นแคชเก่า ส่วน v ต้องคงไว้ชั่วคราวเมื่อกำลังเปิดรุ่นใหม่
+    // เพื่อป้องกันไฟล์ HTML เก่าที่ค้างในแคชรีโหลดวนซ้ำ
     url.searchParams.delete("cb");
-    url.searchParams.delete("v");
+    if (url.searchParams.get("v") === SITE_BUILD_VERSION) url.searchParams.delete("v");
     if (url.href !== window.location.href) {
       window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
     }
@@ -9664,7 +9665,8 @@ let endIso = "";
       if (!response.ok) return;
       const latest = await response.json();
       const latestVersion = String(latest?.version || "").trim();
-      if (!latestVersion || latestVersion === SITE_BUILD_VERSION) return;
+      const requestedVersion = new URL(window.location.href).searchParams.get("v") || "";
+      if (!latestVersion || latestVersion === SITE_BUILD_VERSION || requestedVersion === latestVersion) return;
 
       siteUpdateNavigationStarted_ = true;
       const nextUrl = new URL(window.location.href);
