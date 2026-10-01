@@ -2715,6 +2715,28 @@ function auditPopupFlow(step, data){
           </div>
         </div>
 
+        <div id="bookingDeliveryConflictPanel" class="import-card" style="margin-bottom:16px;border-color:rgba(248,113,113,.55);" hidden>
+          <div class="import-card-title">
+            <span>⚠️ จุดที่ข้อมูลไม่ตรง</span>
+            <span id="bookingDeliveryConflictCount" class="badge-mismatch">0 จุด</span>
+          </div>
+          <p id="bookingDeliveryConflictSummary" style="margin:0 0 12px;color:var(--text-muted);font-size:12px;"></p>
+          <div class="import-table-wrap">
+            <table class="import-mini-table">
+              <thead>
+                <tr>
+                  <th>เคส</th>
+                  <th>เปรียบเทียบ</th>
+                  <th>คอลัมน์</th>
+                  <th>ค่าในชีทจอง</th>
+                  <th>ค่าที่ต่าง</th>
+                </tr>
+              </thead>
+              <tbody id="bookingDeliveryConflictBody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="import-card">
           <div class="import-card-title">
             <span>🕘 ประวัติการนำเข้า</span>
@@ -9290,7 +9312,11 @@ let endIso = "";
           field,
           baseValue: oldValue,
           otherValue: newValue,
-          sourceSheet: sourceLabel
+          sourceSheet: sourceLabel,
+          baseRow: Number(target.__sourceRow || 0),
+          sourceRow: Number(source.__sourceRow || 0),
+          vehicle: bdv3Text(target["ลำดับรถ"]) || bdv3Text(source["ลำดับรถ"]),
+          customer: bdv3Text(target["ชื่อลูกค้า"]) || bdv3Text(source["ชื่อลูกค้า"])
         });
       }
     });
@@ -9318,6 +9344,7 @@ let endIso = "";
       BDV3_BUSINESS_FIELDS.forEach(field => { cloned[field] = bdv3Text(row[field]); });
       cloned.__sourceIdentity = key;
       cloned.__occurrence = occurrence;
+      cloned.__sourceRow = row.__sourceRow;
       baseGroups.get(key).push(cloned);
     });
 
@@ -9397,6 +9424,55 @@ let endIso = "";
     });
   }
 
+  // แสดงรายละเอียดแบบอ่านอย่างเดียว เพื่อให้แก้ที่ต้นทางได้ตรงเซลล์
+  // ไม่เดาค่าทดแทนและไม่เปลี่ยนข้อมูลในไฟล์หรือ Master
+  function bdv3ResetConflictReport() {
+    const panel = document.getElementById("bookingDeliveryConflictPanel");
+    const body = document.getElementById("bookingDeliveryConflictBody");
+    const count = document.getElementById("bookingDeliveryConflictCount");
+    const summary = document.getElementById("bookingDeliveryConflictSummary");
+    if (panel) panel.hidden = true;
+    if (body) body.innerHTML = "";
+    if (count) count.textContent = "0 จุด";
+    if (summary) summary.textContent = "";
+  }
+
+  function bdv3RenderConflictReport(snapshot) {
+    const panel = document.getElementById("bookingDeliveryConflictPanel");
+    const body = document.getElementById("bookingDeliveryConflictBody");
+    const count = document.getElementById("bookingDeliveryConflictCount");
+    const summary = document.getElementById("bookingDeliveryConflictSummary");
+    if (!panel || !body || !count || !summary) return;
+
+    const conflicts = Array.isArray(snapshot && snapshot.conflicts) ? snapshot.conflicts : [];
+    panel.hidden = false;
+    count.textContent = `${conflicts.length.toLocaleString()} จุด`;
+    summary.textContent = conflicts.length
+      ? "ตรวจพบค่าของเคสเดียวกันที่ไม่ตรงกัน โปรดแก้ในไฟล์ต้นทางแล้วตรวจซ้ำ"
+      : (snapshot && snapshot.message) || "ไม่สามารถจับคู่รายการระหว่างชีทได้";
+
+    if (!conflicts.length) {
+      body.innerHTML = '<tr><td colspan="5" class="import-history-empty">ไม่สามารถระบุคอลัมน์ที่ต่างได้: ' +
+        escapeImportHtml((snapshot && snapshot.message) || "รายการระหว่างชีทไม่ตรงกัน") + '</td></tr>';
+      return;
+    }
+
+    body.innerHTML = conflicts.map(conflict => {
+      const vehicle = escapeImportHtml(conflict.vehicle || "ไม่พบรหัสรถ");
+      const customer = escapeImportHtml(conflict.customer || "ไม่พบชื่อลูกค้า");
+      const baseRow = Number(conflict.baseRow || 0);
+      const sourceRow = Number(conflict.sourceRow || 0);
+      const comparison = `จอง!${baseRow || "-"} ↔ ${escapeImportHtml(conflict.sourceSheet || "ชีทอื่น")}!${sourceRow || "-"}`;
+      return `<tr>
+        <td><strong>${vehicle}</strong><br><span style="font-size:11px;color:var(--text-muted);">${customer}</span></td>
+        <td>${comparison}</td>
+        <td><strong>${escapeImportHtml(conflict.field || "-")}</strong></td>
+        <td>${escapeImportHtml(conflict.baseValue || "(ว่าง)")}</td>
+        <td style="color:#fca5a5;">${escapeImportHtml(conflict.otherValue || "(ว่าง)")}</td>
+      </tr>`;
+    }).join("");
+  }
+
   function bdv3ResetSheetKpis() {
     ["importBookingRows", "importSignedRows", "importApprovedRows", "importDeliveryRows"].forEach(id => {
       const el = document.getElementById(id);
@@ -9418,6 +9494,7 @@ let endIso = "";
     bookingDeliveryImportWorkbook = null;
     bookingDeliveryImportData = null;
     bdv3ResetSheetKpis();
+    bdv3ResetConflictReport();
     document.getElementById("importWorkbookName").textContent = "-";
     document.getElementById("bookingDeliverySheetCheckBody").innerHTML = '<tr><td colspan="5" class="import-history-empty">ยังไม่ได้ตรวจไฟล์</td></tr>';
     resetImportResultKpis();
@@ -9460,6 +9537,7 @@ let endIso = "";
     if (analyzeBtn) analyzeBtn.disabled = true;
     if (sendBtn) sendBtn.disabled = true;
     bdv3ResetSheetKpis();
+    bdv3ResetConflictReport();
     const workbookName = document.getElementById("importWorkbookName");
     if (workbookName) workbookName.textContent = "-";
     const checkBody = document.getElementById("bookingDeliverySheetCheckBody");
@@ -9495,6 +9573,7 @@ let endIso = "";
     status.className = "import-status warn";
     status.textContent = "⏳ กำลังอ่าน 4 ชีทและตรวจว่ารายการตรงกัน...";
     resetImportResultKpis();
+    bdv3ResetConflictReport();
 
     try {
       const buffer = await bookingDeliveryImportFile.arrayBuffer();
@@ -9546,6 +9625,7 @@ let endIso = "";
       const snapshot = bdv3BuildSnapshotCases(infos);
       if (!snapshot.valid) {
         bookingDeliveryImportData = null;
+        bdv3RenderConflictReport(snapshot);
         status.className = "import-status bad";
         status.textContent = "✖ " + snapshot.message;
         return;
