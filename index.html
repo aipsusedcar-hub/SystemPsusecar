@@ -8103,6 +8103,13 @@ let endIso = "";
     "อนุมัติ", "ปล่อยรถ", "เดือนคอม", "หมายเหตุ (ส่วนกลาง)"
   ];
 
+  // ค่ากลุ่มนี้เปลี่ยนได้ตามสถานะของเคส: จอง → เซ็นต์ → อนุมัติ → ปล่อย
+  // ชีทที่อยู่ขั้นตอนหลังจึงเป็นค่าล่าสุด และไม่ใช่ข้อมูลชนกัน
+  const BDV3_LIFECYCLE_OVERRIDE_FIELDS = new Set([
+    "วันที่เซ็นต์", "ธนาคาร", "MKT", "ผลเครดิต", "จัดได้ %",
+    "อนุมัติ", "ปล่อยรถ", "เดือนคอม", "หมายเหตุ (ส่วนกลาง)"
+  ]);
+
   const BDV3_SHEET_DEFS = [
     { key: "booking", label: "จอง", aliases: ["จอง"] },
     { key: "signed", label: "เซ็นต์", aliases: ["เซ็นต์", "เซนต์", "เซ็น", "เซน"] },
@@ -9306,6 +9313,12 @@ let endIso = "";
         return;
       }
       if (bdv3NormalizeCompare(oldValue) !== bdv3NormalizeCompare(newValue)) {
+        // ใช้ค่าในชีทสถานะล่าสุด เช่น จองเดือน 08 แต่ปล่อย/คอมเดือน 09
+        // ข้อมูลระบุตัวเคส เช่น รหัสรถและลูกค้า ยังคงต้องแจ้งให้ตรวจสอบ
+        if (BDV3_LIFECYCLE_OVERRIDE_FIELDS.has(field)) {
+          target[field] = newValue;
+          return;
+        }
         conflicts.push({
           key: bdv3CaseIdentity(target) || bdv3CaseIdentity(source),
           occurrence,
