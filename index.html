@@ -5998,7 +5998,8 @@ let endIso = "";
     return cleanText(value)
       .toLowerCase()
       .replace(/\s+/g, "")
-      .replace(/[()\[\]{}]/g, "");
+      // รองรับชื่อแท็บที่พิมพ์ย่อไม่เหมือนกัน เช่น ต.ค.26 / ตค.26 / ตค-26
+      .replace(/[()\[\]{}.\-–—_\/\\]/g, "");
   }
 
   function findSheetForSelectedMonth_(sheets, selectedMonth) {
