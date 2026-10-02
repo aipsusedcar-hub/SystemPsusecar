@@ -4797,17 +4797,26 @@ let endIso = "";
   function normalizeDateToISO(raw) {
     if (!raw) return "";
     const str = raw.toString().trim();
+    // บางชีทบันทึกปี พ.ศ. เป็น YYYY-MM-DD (เช่น 2569-10-01)
+    // ขณะที่ตัวกรองหน้า "สรุปผลรายสาขา" ใช้ ค.ศ. จึงปรับให้เป็นฐานเดียวกัน
+    // ก่อนเปรียบเทียบ โดยยังรองรับข้อมูล ค.ศ. เดิมตามปกติ
+    const normalizeCalendarYear = year => {
+      const numericYear = Number(year);
+      return numericYear >= 2400 && numericYear <= 2800
+        ? numericYear - 543
+        : numericYear;
+    };
 
     // Source of truth จากไฟล์ต้นทาง — ดึง YYYY-MM-DD ตรง ๆ ไม่แปลง timezone
     const isoMatch = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
     if (isoMatch) {
-      return `${isoMatch[1]}-${String(isoMatch[2]).padStart(2, '0')}-${String(isoMatch[3]).padStart(2, '0')}`;
+      return `${normalizeCalendarYear(isoMatch[1])}-${String(isoMatch[2]).padStart(2, '0')}-${String(isoMatch[3]).padStart(2, '0')}`;
     }
 
     // Google Visualization raw Date(year, monthIndex, day, ...)
     const gvizDate = str.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/);
     if (gvizDate) {
-      return `${gvizDate[1]}-${String(Number(gvizDate[2]) + 1).padStart(2, '0')}-${String(gvizDate[3]).padStart(2, '0')}`;
+      return `${normalizeCalendarYear(gvizDate[1])}-${String(Number(gvizDate[2]) + 1).padStart(2, '0')}-${String(gvizDate[3]).padStart(2, '0')}`;
     }
     
     const dmyMatch = str.match(/^(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2,4})/);
@@ -4815,7 +4824,7 @@ let endIso = "";
       let d = parseInt(dmyMatch[1], 10);
       let m = parseInt(dmyMatch[2], 10);
       let y = parseInt(dmyMatch[3], 10);
-      if (y > 2500) y -= 543;
+      if (y >= 2400 && y <= 2800) y -= 543;
       else if (y < 100) y += 2000;
       return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     }
