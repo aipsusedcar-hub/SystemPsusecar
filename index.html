@@ -3150,6 +3150,9 @@ let endIso = "";
   // SECURITY NOTE: Sheet IDs / Apps Script URLs are public identifiers in client-side HTML.
   // Real access control must be enforced by Google sharing settings and Apps Script server-side checks.
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby6jkCMw03lVS6_meuYJxRU8pHQv94ldQe5AswhONnBRiyShIMgyj14pjzNXdgEQDIl/exec";
+  // Endpoint นี้ให้รายชื่อแท็บและ GID ของชีทกลาง/สาขาโดยตรง
+  // แยกจาก backend นำเข้าจอง/ปล่อยซึ่งไม่รองรับ getMainSheets/getBranchSheets
+  const GID_DISCOVERY_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykEJyrzbibmwtVFhe0b3WLmhWZOoW0DbAGx-2Ywq7ekX2rRrV-mN8VaV_FuXXBipO_cQ/exec";
   // Login and protected data APIs share one Apps Script deployment.
   const LOGIN_AUTH_WEB_APP_URL = GAS_WEB_APP_URL;
   const SUPABASE_URL = "https://wfbhkzdcwluosxmreivh.supabase.co";
@@ -6241,7 +6244,7 @@ let endIso = "";
       token,
       ...(cfg.isMain ? {} : { id: cfg.id })
     });
-    const url = `${GAS_WEB_APP_URL}?${params.toString()}`;
+    const url = `${GID_DISCOVERY_WEB_APP_URL}?${params.toString()}`;
 
     const data = await fetchGidJsonp_(url);
 
@@ -6881,10 +6884,11 @@ let endIso = "";
     let monthDb = MONTHLY_GID_DATABASE[targetMonthKey];
     const keys = MONTH_KEYWORDS[targetMonthKey] || [];
 
+    const gidToken = sessionStorage.getItem("ps_auth_token") || "";
+
     if (!monthDb.mainGid) {
       try {
-        const gidToken = sessionStorage.getItem("ps_auth_token") || "";
-        const resMain = await fetch(`${GAS_WEB_APP_URL}?action=getMainSheets&token=${encodeURIComponent(gidToken)}`);
+        const resMain = await fetch(`${GID_DISCOVERY_WEB_APP_URL}?action=getMainSheets&token=${encodeURIComponent(gidToken)}`);
         const sheetsMain = await resMain.json();
         const foundMain = sheetsMain.find(s => keys.some(k => s.title.toLowerCase().includes(k.toLowerCase())));
         if (foundMain) monthDb.mainGid = foundMain.gid;
@@ -6894,7 +6898,7 @@ let endIso = "";
     for (let b of activeBranches) {
       if (!monthDb.branches[b.name]) {
         try {
-          const resBranch = await fetch(`${GAS_WEB_APP_URL}?action=getBranchSheets&id=${b.id}&token=${encodeURIComponent(gidToken)}`);
+          const resBranch = await fetch(`${GID_DISCOVERY_WEB_APP_URL}?action=getBranchSheets&id=${b.id}&token=${encodeURIComponent(gidToken)}`);
           const sheetsBranch = await resBranch.json();
           const foundBranch = sheetsBranch.find(s => keys.some(k => s.title.toLowerCase().includes(k.toLowerCase())));
           if (foundBranch) {
