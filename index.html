@@ -7394,8 +7394,8 @@ let endIso = "";
       } else if (tabId === "tiktokTab") {
         document.querySelectorAll(".tab-btn")[11].classList.add("active");
         document.getElementById("tiktokTab").classList.add("active");
-        if (mainToolbar) mainToolbar.style.display = "flex";
-        // TikTok ไม่ต้องใช้สถานะการโหลดชีทรายเดือน จึงซ่อนแถบนี้เฉพาะหน้านี้
+        // TikTok ใช้ข้อมูลที่อัปโหลดเอง จึงไม่ต้องแสดงตัวกรองข้อมูลชีทรายเดือน
+        if (mainToolbar) mainToolbar.style.display = "none";
         if (statusBar) statusBar.style.display = "none";
         filterSpan.style.display = "none";
         initTikTokTab_();
