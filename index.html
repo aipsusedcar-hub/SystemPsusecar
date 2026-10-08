@@ -292,6 +292,9 @@
     /* TikTok เป็นหน้าข้อมูลที่อัปโหลดเอง จึงไม่ใช้ตัวกรอง/สถานะชีทรายเดือน */
     body.tiktok-active #mainToolbar,
     body.tiktok-active #statusBar { display: none !important; }
+    /* รองรับกรณีเบราว์เซอร์คืนค่าแท็บ TikTok หลังรีโหลด โดยไม่ได้เรียก switchTab() */
+    #mainAppContainer:has(#tiktokTab.active) #mainToolbar,
+    #mainAppContainer:has(#tiktokTab.active) #statusBar { display: none !important; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -10100,7 +10103,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-08.2";
+  const SITE_BUILD_VERSION = "2026-10-08.3";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
