@@ -289,6 +289,9 @@
     }
     .tab-content { display: none; }
     .tab-content.active { display: block; animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    /* TikTok เป็นหน้าข้อมูลที่อัปโหลดเอง จึงไม่ใช้ตัวกรอง/สถานะชีทรายเดือน */
+    body.tiktok-active #mainToolbar,
+    body.tiktok-active #statusBar { display: none !important; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -7295,6 +7298,7 @@ let endIso = "";
 
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+    document.body.classList.toggle("tiktok-active", tabId === "tiktokTab");
 
     const mainToolbar = document.getElementById("mainToolbar");
     const dateFilterWrapper = document.getElementById("dateFilterWrapper");
@@ -10096,7 +10100,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-08.1";
+  const SITE_BUILD_VERSION = "2026-10-08.2";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
