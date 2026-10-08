@@ -7395,7 +7395,8 @@ let endIso = "";
         document.querySelectorAll(".tab-btn")[11].classList.add("active");
         document.getElementById("tiktokTab").classList.add("active");
         if (mainToolbar) mainToolbar.style.display = "flex";
-        if (statusBar) statusBar.style.display = "flex";
+        // TikTok ไม่ต้องใช้สถานะการโหลดชีทรายเดือน จึงซ่อนแถบนี้เฉพาะหน้านี้
+        if (statusBar) statusBar.style.display = "none";
         filterSpan.style.display = "none";
         initTikTokTab_();
         renderTikTokTab_();
