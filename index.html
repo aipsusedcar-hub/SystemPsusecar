@@ -2484,6 +2484,12 @@ function auditPopupFlow(step, data){
             <div id="tiktokDateLabel" style="font-size:12px; color:var(--text-muted);">ช่วงวันที่: -</div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">ชื่อช่อง
+              <input id="tiktokChannelName" type="text" value="PSรถมือสอง" placeholder="เช่น PSรถมือสอง" style="width:150px;">
+            </label>
+            <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">แสดง
+              <select id="tiktokChannelFilter" onchange="renderTikTokTab_()" style="width:150px;"><option value="">ทุกช่อง</option></select>
+            </label>
             <input type="file" id="tiktokFileInput" accept=".xlsx,.xls,.csv" hidden>
             <button type="button" onclick="document.getElementById('tiktokFileInput').click()">📁 อัปโหลดไฟล์</button>
             <button type="button" class="btn-clear" onclick="downloadTikTokTemplate_()">📥 ไฟล์ตัวอย่าง</button>
@@ -2502,7 +2508,7 @@ function auditPopupFlow(step, data){
             <label style="font-size:11px;color:var(--text-muted);">รายได้โดยประมาณ<input id="tiktokEntryRevenue" type="number" min="0" step="0.01" placeholder="0.00" style="width:100%;margin-top:4px;"></label>
             <button class="btn-success" type="button" onclick="saveTikTokManualEntry_()">💾 บันทึก</button>
           </div>
-          <div id="tiktokImportStatus" style="margin-top:10px;font-size:12px;color:var(--text-muted);">รองรับคอลัมน์ วันที่, ยอดรับชมวิดีโอ, ยอดเข้าชมโปรไฟล์, ถูกใจ, ความคิดเห็น, แชร์ และรายได้โดยประมาณ</div>
+          <div id="tiktokImportStatus" style="margin-top:10px;font-size:12px;color:var(--text-muted);">ระบุชื่อช่องก่อนอัปโหลด • รองรับ Date/วันที่, Video Views, Profile Views, Likes, Comments, Shares และรายได้โดยประมาณ</div>
         </div>
         <div class="kpi-grid">
           <div class="kpi-card"><span class="kpi-card-title">▶️ ยอดรับชมวิดีโอ</span><span class="kpi-card-value" id="tiktokKpiViews">0</span></div>
@@ -2518,8 +2524,8 @@ function auditPopupFlow(step, data){
         </div>
         <div class="table-responsive" style="max-height:none; overflow-y:visible; margin-top:16px;">
           <table class="styled-report-table">
-            <thead><tr><th>วันที่</th><th>ยอดรับชม</th><th>เข้าชมโปรไฟล์</th><th>ถูกใจ</th><th>ความคิดเห็น</th><th>แชร์</th><th>รายได้โดยประมาณ</th><th>จัดการ</th></tr></thead>
-            <tbody id="tiktokTableBody"><tr><td class="empty-row" colspan="8">ยังไม่มีข้อมูล TikTok</td></tr></tbody>
+            <thead><tr><th>ช่อง TikTok</th><th>วันที่</th><th>ยอดรับชม</th><th>เข้าชมโปรไฟล์</th><th>ถูกใจ</th><th>ความคิดเห็น</th><th>แชร์</th><th>รายได้โดยประมาณ</th><th>จัดการ</th></tr></thead>
+            <tbody id="tiktokTableBody"><tr><td class="empty-row" colspan="9">ยังไม่มีข้อมูล TikTok</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -7107,6 +7113,7 @@ let endIso = "";
     try {
       const value = JSON.parse(localStorage.getItem(TIKTOK_STORAGE_KEY) || "[]");
       return Array.isArray(value) ? value.filter(row => row && normalizeDateToISO(row.date)).map(row => ({
+        channel: cleanText(row.channel) || "ไม่ระบุช่อง",
         date: normalizeDateToISO(row.date),
         views: normalizeTikTokMetricNumber_(row.views),
         profileViews: normalizeTikTokMetricNumber_(row.profileViews),
@@ -7121,11 +7128,13 @@ let endIso = "";
   }
 
   function saveTikTokRows_(rows) {
-    const byDate = new Map();
+    const byChannelAndDate = new Map();
     rows.forEach(row => {
       const date = normalizeDateToISO(row?.date);
       if (!date) return;
-      byDate.set(date, {
+      const channel = cleanText(row?.channel) || "ไม่ระบุช่อง";
+      byChannelAndDate.set(`${channel}\u0000${date}`, {
+        channel,
         date,
         views: normalizeTikTokMetricNumber_(row.views),
         profileViews: normalizeTikTokMetricNumber_(row.profileViews),
@@ -7135,7 +7144,9 @@ let endIso = "";
         revenue: normalizeTikTokMetricNumber_(row.revenue)
       });
     });
-    const result = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+    const result = Array.from(byChannelAndDate.values()).sort((a, b) =>
+      a.channel.localeCompare(b.channel, "th") || a.date.localeCompare(b.date)
+    );
     localStorage.setItem(TIKTOK_STORAGE_KEY, JSON.stringify(result));
     return result;
   }
@@ -7144,14 +7155,24 @@ let endIso = "";
     const body = document.getElementById("tiktokTableBody");
     const chart = document.getElementById("tiktokChart");
     const label = document.getElementById("tiktokDateLabel");
+    const channelFilter = document.getElementById("tiktokChannelFilter");
     const range = getMainDateRange();
     const allRows = readTikTokRows_();
-    const rows = allRows.filter(row => row.date >= range.start && row.date <= range.end);
+    const previousChannel = channelFilter?.value || "";
+    if (channelFilter) {
+      const channels = [...new Set(allRows.map(row => row.channel))].sort((a, b) => a.localeCompare(b, "th"));
+      channelFilter.innerHTML = '<option value="">ทุกช่อง</option>' + channels.map(channel =>
+        `<option value="${escapeSecurityHtml(channel)}">${escapeSecurityHtml(channel)}</option>`
+      ).join("");
+      channelFilter.value = channels.includes(previousChannel) ? previousChannel : "";
+    }
+    const selectedChannel = channelFilter?.value || "";
+    const rows = allRows.filter(row => row.date >= range.start && row.date <= range.end && (!selectedChannel || row.channel === selectedChannel));
     const total = field => rows.reduce((sum, row) => sum + Number(row[field] || 0), 0);
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
     const fmt = value => Number(value || 0).toLocaleString("th-TH", { maximumFractionDigits: 2 });
 
-    if (label) label.textContent = `ช่วงวันที่: ${formatDisplayDateTH(range.start)} - ${formatDisplayDateTH(range.end)}`;
+    if (label) label.textContent = `ช่วงวันที่: ${formatDisplayDateTH(range.start)} - ${formatDisplayDateTH(range.end)}${selectedChannel ? ` • ช่อง ${selectedChannel}` : " • ทุกช่อง"}`;
     set("tiktokKpiViews", fmt(total("views")));
     set("tiktokKpiProfile", fmt(total("profileViews")));
     set("tiktokKpiLikes", fmt(total("likes")));
@@ -7161,6 +7182,7 @@ let endIso = "";
 
     if (body) {
       body.innerHTML = rows.length ? rows.slice().sort((a, b) => b.date.localeCompare(a.date)).map(row => `<tr>
+        <td>${escapeSecurityHtml(row.channel)}</td>
         <td style="text-align:center;">${escapeSecurityHtml(formatDisplayDateTH(row.date))}</td>
         <td style="text-align:right;">${fmt(row.views)}</td>
         <td style="text-align:right;">${fmt(row.profileViews)}</td>
@@ -7168,21 +7190,24 @@ let endIso = "";
         <td style="text-align:right;">${fmt(row.comments)}</td>
         <td style="text-align:right;">${fmt(row.shares)}</td>
         <td style="text-align:right;">฿${fmt(row.revenue)}</td>
-        <td style="text-align:center;"><button type="button" class="btn-clear" style="padding:5px 8px;font-size:11px;" onclick="deleteTikTokRow_('${row.date}')">ลบ</button></td>
-      </tr>`).join("") : '<tr><td class="empty-row" colspan="8">ยังไม่มีข้อมูล TikTok ในช่วงวันที่เลือก</td></tr>';
+        <td style="text-align:center;"><button type="button" class="btn-clear" style="padding:5px 8px;font-size:11px;" onclick="deleteTikTokRow_('${encodeURIComponent(row.channel)}','${row.date}')">ลบ</button></td>
+      </tr>`).join("") : '<tr><td class="empty-row" colspan="9">ยังไม่มีข้อมูล TikTok ในช่วงวันที่เลือก</td></tr>';
     }
 
     if (chart) {
       if (!rows.length) {
         chart.innerHTML = '<div style="width:100%;text-align:center;color:var(--text-muted);">ยังไม่มีข้อมูลสำหรับสร้างกราฟ</div>';
       } else {
-        const maxViews = Math.max(...rows.map(row => row.views), 1);
-        chart.innerHTML = rows.map(row => {
-          const height = Math.max(4, Math.round((row.views / maxViews) * 164));
-          return `<div style="height:100%;min-width:62px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;" title="${escapeSecurityHtml(formatDisplayDateTH(row.date))}: ${fmt(row.views)} ครั้ง">
-            <span style="font-size:10px;color:var(--text-muted);">${fmt(row.views)}</span>
+        const daily = new Map();
+        rows.forEach(row => daily.set(row.date, (daily.get(row.date) || 0) + row.views));
+        const dailyRows = [...daily.entries()].sort(([a], [b]) => a.localeCompare(b));
+        const maxViews = Math.max(...dailyRows.map(([, views]) => views), 1);
+        chart.innerHTML = dailyRows.map(([date, views]) => {
+          const height = Math.max(4, Math.round((views / maxViews) * 164));
+          return `<div style="height:100%;min-width:62px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;" title="${escapeSecurityHtml(formatDisplayDateTH(date))}: ${fmt(views)} ครั้ง">
+            <span style="font-size:10px;color:var(--text-muted);">${fmt(views)}</span>
             <span style="height:${height}px;width:24px;border-radius:8px 8px 2px 2px;background:linear-gradient(180deg,#25f4ee,#1677ff);box-shadow:0 0 14px rgba(37,244,238,.35);"></span>
-            <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${escapeSecurityHtml(formatDisplayDateTH(row.date))}</span>
+            <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${escapeSecurityHtml(formatDisplayDateTH(date))}</span>
           </div>`;
         }).join("");
       }
@@ -7192,34 +7217,36 @@ let endIso = "";
   function saveTikTokManualEntry_() {
     const value = id => document.getElementById(id)?.value || "";
     const date = normalizeDateToISO(value("tiktokEntryDate"));
+    const channel = cleanText(value("tiktokChannelName"));
     const status = document.getElementById("tiktokImportStatus");
-    if (!date) {
-      if (status) status.textContent = "⚠️ กรุณาเลือกวันที่ก่อนบันทึก";
+    if (!date || !channel) {
+      if (status) status.textContent = "⚠️ กรุณาระบุชื่อช่องและเลือกวันที่ก่อนบันทึก";
       return;
     }
-    const rows = readTikTokRows_().filter(row => row.date !== date);
+    const rows = readTikTokRows_().filter(row => !(row.channel === channel && row.date === date));
     rows.push({
-      date,
+      channel, date,
       views: value("tiktokEntryViews"), profileViews: value("tiktokEntryProfile"),
       likes: value("tiktokEntryLikes"), comments: value("tiktokEntryComments"),
       shares: value("tiktokEntryShares"), revenue: value("tiktokEntryRevenue")
     });
     saveTikTokRows_(rows);
     ["tiktokEntryViews", "tiktokEntryProfile", "tiktokEntryLikes", "tiktokEntryComments", "tiktokEntryShares", "tiktokEntryRevenue"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
-    if (status) status.textContent = `✅ บันทึกข้อมูล TikTok วันที่ ${formatDisplayDateTH(date)} แล้ว`;
+    if (status) status.textContent = `✅ บันทึกข้อมูลช่อง ${channel} วันที่ ${formatDisplayDateTH(date)} แล้ว`;
     renderTikTokTab_();
   }
 
-  function deleteTikTokRow_(date) {
-    if (!window.confirm(`ลบข้อมูล TikTok วันที่ ${formatDisplayDateTH(date)} ใช่หรือไม่`)) return;
-    saveTikTokRows_(readTikTokRows_().filter(row => row.date !== date));
+  function deleteTikTokRow_(encodedChannel, date) {
+    const channel = decodeURIComponent(encodedChannel);
+    if (!window.confirm(`ลบข้อมูล TikTok ช่อง ${channel} วันที่ ${formatDisplayDateTH(date)} ใช่หรือไม่`)) return;
+    saveTikTokRows_(readTikTokRows_().filter(row => !(row.channel === channel && row.date === date)));
     renderTikTokTab_();
   }
 
   function downloadTikTokTemplate_() {
     const template = [
-      ["วันที่", "ยอดรับชมวิดีโอ", "ยอดเข้าชมโปรไฟล์", "ถูกใจ", "ความคิดเห็น", "แชร์", "รายได้โดยประมาณ"],
-      ["2026-10-01", "0", "0", "0", "0", "0", "0.00"]
+      ["ชื่อช่อง", "วันที่", "ยอดรับชมวิดีโอ", "ยอดเข้าชมโปรไฟล์", "ถูกใจ", "ความคิดเห็น", "แชร์", "รายได้โดยประมาณ"],
+      ["PSรถมือสอง", "2026-10-01", "0", "0", "0", "0", "0", "0.00"]
     ].map(row => row.join(",")).join("\n");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob(["\uFEFF" + template], { type: "text/csv;charset=utf-8" }));
@@ -7232,12 +7259,31 @@ let endIso = "";
     return cleanText(value).toLowerCase().normalize("NFKC").replace(/[\s_./()-]/g, "");
   }
 
-  function parseTikTokMatrix_(matrix) {
+  function normalizeTikTokDate_(value, fallbackYear) {
+    const direct = normalizeDateToISO(value);
+    if (direct) return direct;
+    const raw = cleanText(value).replace(/\s+/g, "");
+    const match = raw.match(/^(\d{1,2})[-\/\s]([ก-ฮ.]+)(?:[-\/\s](\d{2,4}))?$/);
+    if (!match) return "";
+    const monthName = match[2].replace(/\./g, "");
+    const thaiMonths = {
+      "มค": 1, "กพ": 2, "มีค": 3, "เมย": 4, "พค": 5, "มิย": 6,
+      "กค": 7, "สค": 8, "กย": 9, "ตค": 10, "พย": 11, "ธค": 12
+    };
+    const month = thaiMonths[monthName];
+    if (!month) return "";
+    const parsedYear = match[3] ? Number(match[3]) : Number(fallbackYear);
+    const year = parsedYear === 69 ? 2026 : (parsedYear >= 2400 ? parsedYear - 543 : (parsedYear < 100 ? 2000 + parsedYear : parsedYear));
+    return `${year}-${String(month).padStart(2, "0")}-${String(Number(match[1])).padStart(2, "0")}`;
+  }
+
+  function parseTikTokMatrix_(matrix, defaultChannel, fallbackYear) {
     const headerRowIndex = matrix.findIndex(row => (row || []).some(cell => /วันที่|date/i.test(cleanText(cell))));
     if (headerRowIndex < 0) throw new Error("ไม่พบคอลัมน์ วันที่ ในไฟล์");
     const headers = (matrix[headerRowIndex] || []).map(normalizeTikTokHeader_);
     const find = aliases => headers.findIndex(header => aliases.some(alias => header.includes(alias)));
     const col = {
+      channel: find(["ชื่อช่อง", "ช่องtiktok", "channel", "account"]),
       date: find(["วันที่", "วันเดือนปี", "date"]),
       views: find(["ยอดรับชมวิดีโอ", "ยอดรับชม", "videoview", "views"]),
       profileViews: find(["ยอดเข้าชมโปรไฟล์", "เข้าชมโปรไฟล์", "profileview"]),
@@ -7246,7 +7292,8 @@ let endIso = "";
     };
     if (col.date < 0 || col.views < 0) throw new Error("ไฟล์ต้องมีคอลัมน์ วันที่ และ ยอดรับชมวิดีโอ");
     return matrix.slice(headerRowIndex + 1).map(row => ({
-      date: normalizeDateToISO(row?.[col.date]), views: row?.[col.views], profileViews: row?.[col.profileViews],
+      channel: cleanText(row?.[col.channel]) || defaultChannel,
+      date: normalizeTikTokDate_(row?.[col.date], fallbackYear), views: row?.[col.views], profileViews: row?.[col.profileViews],
       likes: row?.[col.likes], comments: row?.[col.comments], shares: row?.[col.shares], revenue: row?.[col.revenue]
     })).filter(row => row.date);
   }
@@ -7256,6 +7303,9 @@ let endIso = "";
     try {
       const name = String(file?.name || "").toLowerCase();
       if (!file || !/\.(xlsx|xls|csv)$/.test(name)) throw new Error("กรุณาเลือกไฟล์ .xlsx, .xls หรือ .csv");
+      const selectedChannel = cleanText(document.getElementById("tiktokChannelName")?.value);
+      if (!selectedChannel) throw new Error("กรุณาระบุชื่อช่องก่อนอัปโหลดไฟล์");
+      const fileYear = Number(String(file.name).match(/(20\d{2})[-_]/)?.[1] || new Date().getFullYear());
       let matrix;
       if (/\.csv$/.test(name)) {
         const text = await file.text();
@@ -7266,10 +7316,10 @@ let endIso = "";
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false, dateNF: "yyyy-mm-dd" });
       }
-      const imported = parseTikTokMatrix_(matrix);
+      const imported = parseTikTokMatrix_(matrix, selectedChannel, fileYear);
       if (!imported.length) throw new Error("ไม่พบข้อมูลรายวันสำหรับนำเข้า");
       saveTikTokRows_([...readTikTokRows_(), ...imported]);
-      if (status) status.textContent = `✅ นำเข้า ${imported.length.toLocaleString()} วันจากไฟล์ ${file.name} แล้ว`;
+      if (status) status.textContent = `✅ นำเข้า ${imported.length.toLocaleString()} วันของช่อง ${selectedChannel} จากไฟล์ ${file.name} แล้ว`;
       renderTikTokTab_();
     } catch (error) {
       if (status) status.textContent = `✖ ${error?.message || "นำเข้าไฟล์ไม่สำเร็จ"}`;
@@ -10103,7 +10153,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-08.3";
+  const SITE_BUILD_VERSION = "2026-10-08.4";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
