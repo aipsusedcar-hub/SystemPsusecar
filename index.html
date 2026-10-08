@@ -2482,6 +2482,7 @@ function auditPopupFlow(step, data){
           <div>
             <h3 style="margin:0 0 6px; color:var(--text-main); font-size:16px;">🎵 สรุปข้อมูล TikTok</h3>
             <div id="tiktokDateLabel" style="font-size:12px; color:var(--text-muted);">ช่วงวันที่: -</div>
+            <div id="tiktokImportStatus" style="margin-top:6px;font-size:11px;color:var(--text-muted);">ระบุชื่อช่องก่อนอัปโหลด • รองรับ Date/วันที่, Video Views, Profile Views, Likes, Comments และ Shares</div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">ชื่อช่อง
@@ -2496,27 +2497,12 @@ function auditPopupFlow(step, data){
             <button class="btn-success" type="button" onclick="renderTikTokTab_()">🔄 รีเฟรชข้อมูล</button>
           </div>
         </div>
-        <div style="background:#0f172a; padding:14px; border-radius:12px; border:1px solid var(--border-color); margin-bottom:16px;">
-          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">➕ บันทึกสถิติรายวัน</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;align-items:end;">
-            <label style="font-size:11px;color:var(--text-muted);">วันที่<input id="tiktokEntryDate" type="date" style="width:100%;margin-top:4px;"></label>
-            <label style="font-size:11px;color:var(--text-muted);">ยอดรับชม<input id="tiktokEntryViews" type="number" min="0" placeholder="0" style="width:100%;margin-top:4px;"></label>
-            <label style="font-size:11px;color:var(--text-muted);">เข้าชมโปรไฟล์<input id="tiktokEntryProfile" type="number" min="0" placeholder="0" style="width:100%;margin-top:4px;"></label>
-            <label style="font-size:11px;color:var(--text-muted);">ถูกใจ<input id="tiktokEntryLikes" type="number" min="0" placeholder="0" style="width:100%;margin-top:4px;"></label>
-            <label style="font-size:11px;color:var(--text-muted);">ความคิดเห็น<input id="tiktokEntryComments" type="number" min="0" placeholder="0" style="width:100%;margin-top:4px;"></label>
-            <label style="font-size:11px;color:var(--text-muted);">แชร์<input id="tiktokEntryShares" type="number" min="0" placeholder="0" style="width:100%;margin-top:4px;"></label>
-            <label style="font-size:11px;color:var(--text-muted);">รายได้โดยประมาณ<input id="tiktokEntryRevenue" type="number" min="0" step="0.01" placeholder="0.00" style="width:100%;margin-top:4px;"></label>
-            <button class="btn-success" type="button" onclick="saveTikTokManualEntry_()">💾 บันทึก</button>
-          </div>
-          <div id="tiktokImportStatus" style="margin-top:10px;font-size:12px;color:var(--text-muted);">ระบุชื่อช่องก่อนอัปโหลด • รองรับ Date/วันที่, Video Views, Profile Views, Likes, Comments, Shares และรายได้โดยประมาณ</div>
-        </div>
         <div class="kpi-grid">
           <div class="kpi-card"><span class="kpi-card-title">▶️ ยอดรับชมวิดีโอ</span><span class="kpi-card-value" id="tiktokKpiViews">0</span></div>
           <div class="kpi-card"><span class="kpi-card-title">👤 ยอดเข้าชมโปรไฟล์</span><span class="kpi-card-value" id="tiktokKpiProfile">0</span></div>
           <div class="kpi-card"><span class="kpi-card-title">👍 ถูกใจ</span><span class="kpi-card-value" id="tiktokKpiLikes">0</span></div>
           <div class="kpi-card"><span class="kpi-card-title">💬 ความคิดเห็น</span><span class="kpi-card-value" id="tiktokKpiComments">0</span></div>
           <div class="kpi-card"><span class="kpi-card-title">↗️ แชร์</span><span class="kpi-card-value" id="tiktokKpiShares">0</span></div>
-          <div class="kpi-card"><span class="kpi-card-title">💰 รายได้โดยประมาณ</span><span class="kpi-card-value" id="tiktokKpiRevenue">฿0.00</span></div>
         </div>
         <div style="background:#0f172a; border:1px solid var(--border-color); border-radius:12px; padding:14px; margin-top:16px;">
           <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📈 ยอดรับชมวิดีโอรายวัน</div>
@@ -2524,8 +2510,8 @@ function auditPopupFlow(step, data){
         </div>
         <div class="table-responsive" style="max-height:none; overflow-y:visible; margin-top:16px;">
           <table class="styled-report-table">
-            <thead><tr><th>ช่อง TikTok</th><th>วันที่</th><th>ยอดรับชม</th><th>เข้าชมโปรไฟล์</th><th>ถูกใจ</th><th>ความคิดเห็น</th><th>แชร์</th><th>รายได้โดยประมาณ</th><th>จัดการ</th></tr></thead>
-            <tbody id="tiktokTableBody"><tr><td class="empty-row" colspan="9">ยังไม่มีข้อมูล TikTok</td></tr></tbody>
+            <thead><tr><th>ช่อง TikTok</th><th>วันที่</th><th>ยอดรับชม</th><th>เข้าชมโปรไฟล์</th><th>ถูกใจ</th><th>ความคิดเห็น</th><th>แชร์</th><th>จัดการ</th></tr></thead>
+            <tbody id="tiktokTableBody"><tr><td class="empty-row" colspan="8">ยังไม่มีข้อมูล TikTok</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -7119,8 +7105,7 @@ let endIso = "";
         profileViews: normalizeTikTokMetricNumber_(row.profileViews),
         likes: normalizeTikTokMetricNumber_(row.likes),
         comments: normalizeTikTokMetricNumber_(row.comments),
-        shares: normalizeTikTokMetricNumber_(row.shares),
-        revenue: normalizeTikTokMetricNumber_(row.revenue)
+        shares: normalizeTikTokMetricNumber_(row.shares)
       })) : [];
     } catch (_) {
       return [];
@@ -7140,8 +7125,7 @@ let endIso = "";
         profileViews: normalizeTikTokMetricNumber_(row.profileViews),
         likes: normalizeTikTokMetricNumber_(row.likes),
         comments: normalizeTikTokMetricNumber_(row.comments),
-        shares: normalizeTikTokMetricNumber_(row.shares),
-        revenue: normalizeTikTokMetricNumber_(row.revenue)
+        shares: normalizeTikTokMetricNumber_(row.shares)
       });
     });
     const result = Array.from(byChannelAndDate.values()).sort((a, b) =>
@@ -7181,7 +7165,6 @@ let endIso = "";
     set("tiktokKpiLikes", fmt(total("likes")));
     set("tiktokKpiComments", fmt(total("comments")));
     set("tiktokKpiShares", fmt(total("shares")));
-    set("tiktokKpiRevenue", `฿${fmt(total("revenue"))}`);
 
     if (body) {
       body.innerHTML = rows.length ? rows.slice().sort((a, b) => b.date.localeCompare(a.date)).map(row => `<tr>
@@ -7192,9 +7175,8 @@ let endIso = "";
         <td style="text-align:right;">${fmt(row.likes)}</td>
         <td style="text-align:right;">${fmt(row.comments)}</td>
         <td style="text-align:right;">${fmt(row.shares)}</td>
-        <td style="text-align:right;">฿${fmt(row.revenue)}</td>
         <td style="text-align:center;"><button type="button" class="btn-clear" style="padding:5px 8px;font-size:11px;" onclick="deleteTikTokRow_('${encodeURIComponent(row.channel)}','${row.date}')">ลบ</button></td>
-      </tr>`).join("") : '<tr><td class="empty-row" colspan="9">ยังไม่มีข้อมูล TikTok ในช่วงวันที่เลือก</td></tr>';
+      </tr>`).join("") : '<tr><td class="empty-row" colspan="8">ยังไม่มีข้อมูล TikTok ในช่วงวันที่เลือก</td></tr>';
     }
 
     if (chart) {
@@ -7217,28 +7199,6 @@ let endIso = "";
     }
   }
 
-  function saveTikTokManualEntry_() {
-    const value = id => document.getElementById(id)?.value || "";
-    const date = normalizeDateToISO(value("tiktokEntryDate"));
-    const channel = cleanText(value("tiktokChannelName"));
-    const status = document.getElementById("tiktokImportStatus");
-    if (!date || !channel) {
-      if (status) status.textContent = "⚠️ กรุณาระบุชื่อช่องและเลือกวันที่ก่อนบันทึก";
-      return;
-    }
-    const rows = readTikTokRows_().filter(row => !(row.channel === channel && row.date === date));
-    rows.push({
-      channel, date,
-      views: value("tiktokEntryViews"), profileViews: value("tiktokEntryProfile"),
-      likes: value("tiktokEntryLikes"), comments: value("tiktokEntryComments"),
-      shares: value("tiktokEntryShares"), revenue: value("tiktokEntryRevenue")
-    });
-    saveTikTokRows_(rows);
-    ["tiktokEntryViews", "tiktokEntryProfile", "tiktokEntryLikes", "tiktokEntryComments", "tiktokEntryShares", "tiktokEntryRevenue"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
-    if (status) status.textContent = `✅ บันทึกข้อมูลช่อง ${channel} วันที่ ${formatDisplayDateTH(date)} แล้ว`;
-    renderTikTokTab_();
-  }
-
   function deleteTikTokRow_(encodedChannel, date) {
     const channel = decodeURIComponent(encodedChannel);
     if (!window.confirm(`ลบข้อมูล TikTok ช่อง ${channel} วันที่ ${formatDisplayDateTH(date)} ใช่หรือไม่`)) return;
@@ -7248,8 +7208,8 @@ let endIso = "";
 
   function downloadTikTokTemplate_() {
     const template = [
-      ["ชื่อช่อง", "วันที่", "ยอดรับชมวิดีโอ", "ยอดเข้าชมโปรไฟล์", "ถูกใจ", "ความคิดเห็น", "แชร์", "รายได้โดยประมาณ"],
-      ["PSรถมือสอง", "2026-10-01", "0", "0", "0", "0", "0", "0.00"]
+      ["ชื่อช่อง", "วันที่", "ยอดรับชมวิดีโอ", "ยอดเข้าชมโปรไฟล์", "ถูกใจ", "ความคิดเห็น", "แชร์"],
+      ["PSรถมือสอง", "2026-10-01", "0", "0", "0", "0", "0"]
     ].map(row => row.join(",")).join("\n");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob(["\uFEFF" + template], { type: "text/csv;charset=utf-8" }));
@@ -7291,13 +7251,13 @@ let endIso = "";
       views: find(["ยอดรับชมวิดีโอ", "ยอดรับชม", "videoview", "views"]),
       profileViews: find(["ยอดเข้าชมโปรไฟล์", "เข้าชมโปรไฟล์", "profileview"]),
       likes: find(["ถูกใจ", "like"]), comments: find(["ความคิดเห็น", "comment"]),
-      shares: find(["แชร์", "share"]), revenue: find(["รายได้โดยประมาณ", "รายได้", "revenue", "reward"])
+      shares: find(["แชร์", "share"])
     };
     if (col.date < 0 || col.views < 0) throw new Error("ไฟล์ต้องมีคอลัมน์ วันที่ และ ยอดรับชมวิดีโอ");
     return matrix.slice(headerRowIndex + 1).map(row => ({
       channel: cleanText(row?.[col.channel]) || defaultChannel,
       date: normalizeTikTokDate_(row?.[col.date], fallbackYear), views: row?.[col.views], profileViews: row?.[col.profileViews],
-      likes: row?.[col.likes], comments: row?.[col.comments], shares: row?.[col.shares], revenue: row?.[col.revenue]
+      likes: row?.[col.likes], comments: row?.[col.comments], shares: row?.[col.shares]
     })).filter(row => row.date);
   }
 
@@ -7331,8 +7291,6 @@ let endIso = "";
 
   function initTikTokTab_() {
     const input = document.getElementById("tiktokFileInput");
-    const date = document.getElementById("tiktokEntryDate");
-    if (date && !date.value) date.value = getMainDateRange().end;
     if (input && !input.dataset.bound) {
       input.dataset.bound = "true";
       input.addEventListener("change", () => {
@@ -10156,7 +10114,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-08.5";
+  const SITE_BUILD_VERSION = "2026-10-08.6";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
