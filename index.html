@@ -7156,7 +7156,6 @@ let endIso = "";
     const chart = document.getElementById("tiktokChart");
     const label = document.getElementById("tiktokDateLabel");
     const channelFilter = document.getElementById("tiktokChannelFilter");
-    const range = getMainDateRange();
     const allRows = readTikTokRows_();
     const previousChannel = channelFilter?.value || "";
     if (channelFilter) {
@@ -7167,12 +7166,16 @@ let endIso = "";
       channelFilter.value = channels.includes(previousChannel) ? previousChannel : "";
     }
     const selectedChannel = channelFilter?.value || "";
-    const rows = allRows.filter(row => row.date >= range.start && row.date <= range.end && (!selectedChannel || row.channel === selectedChannel));
+    // หน้า TikTok ซ่อนตัวกรองวันของแดชบอร์ดหลัก จึงแสดงข้อมูลที่อัปโหลดทั้งหมด
+    // เพื่อไม่ให้ไฟล์ที่มีคนละวันกับหน้าหลักถูกนำเข้าแล้วดูเหมือนไม่พบข้อมูล
+    const rows = allRows.filter(row => !selectedChannel || row.channel === selectedChannel);
     const total = field => rows.reduce((sum, row) => sum + Number(row[field] || 0), 0);
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
     const fmt = value => Number(value || 0).toLocaleString("th-TH", { maximumFractionDigits: 2 });
 
-    if (label) label.textContent = `ช่วงวันที่: ${formatDisplayDateTH(range.start)} - ${formatDisplayDateTH(range.end)}${selectedChannel ? ` • ช่อง ${selectedChannel}` : " • ทุกช่อง"}`;
+    const dates = rows.map(row => row.date).sort();
+    const dateText = dates.length ? `${formatDisplayDateTH(dates[0])} - ${formatDisplayDateTH(dates[dates.length - 1])}` : "-";
+    if (label) label.textContent = `ช่วงข้อมูล: ${dateText}${selectedChannel ? ` • ช่อง ${selectedChannel}` : " • ทุกช่อง"}`;
     set("tiktokKpiViews", fmt(total("views")));
     set("tiktokKpiProfile", fmt(total("profileViews")));
     set("tiktokKpiLikes", fmt(total("likes")));
@@ -10153,7 +10156,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-08.4";
+  const SITE_BUILD_VERSION = "2026-10-08.5";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
