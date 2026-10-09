@@ -2505,9 +2505,10 @@ function auditPopupFlow(step, data){
           <div class="kpi-card"><span class="kpi-card-title">↗️ แชร์</span><span class="kpi-card-value" id="tiktokKpiShares">0</span></div>
         </div>
         <div style="background:#0f172a; border:1px solid var(--border-color); border-radius:12px; padding:14px; margin-top:16px;">
-          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📈 ยอดรับชมวิดีโอรายวัน</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📈 ยอดรับชมวิดีโอรายวัน (ตามตัวกรอง)</div>
           <div id="tiktokChart" style="height:220px;display:flex;align-items:flex-end;gap:10px;padding:8px 4px;overflow-x:auto;"></div>
         </div>
+        <div id="tiktokChannelCharts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-top:16px;"></div>
         <div class="table-responsive" style="max-height:none; overflow-y:visible; margin-top:16px;">
           <table class="styled-report-table">
             <thead><tr><th>ช่อง TikTok</th><th>วันที่</th><th>ยอดรับชม</th><th>เข้าชมโปรไฟล์</th><th>ถูกใจ</th><th>ความคิดเห็น</th><th>แชร์</th><th>จัดการ</th></tr></thead>
@@ -7139,6 +7140,7 @@ let endIso = "";
     const body = document.getElementById("tiktokTableBody");
     const chart = document.getElementById("tiktokChart");
     const label = document.getElementById("tiktokDateLabel");
+    const channelCharts = document.getElementById("tiktokChannelCharts");
     const channelFilter = document.getElementById("tiktokChannelFilter");
     const allRows = readTikTokRows_();
     const previousChannel = channelFilter?.value || "";
@@ -7179,23 +7181,43 @@ let endIso = "";
       </tr>`).join("") : '<tr><td class="empty-row" colspan="8">ยังไม่มีข้อมูล TikTok ในช่วงวันที่เลือก</td></tr>';
     }
 
-    if (chart) {
-      if (!rows.length) {
-        chart.innerHTML = '<div style="width:100%;text-align:center;color:var(--text-muted);">ยังไม่มีข้อมูลสำหรับสร้างกราฟ</div>';
-      } else {
-        const daily = new Map();
-        rows.forEach(row => daily.set(row.date, (daily.get(row.date) || 0) + row.views));
-        const dailyRows = [...daily.entries()].sort(([a], [b]) => a.localeCompare(b));
-        const maxViews = Math.max(...dailyRows.map(([, views]) => views), 1);
-        chart.innerHTML = dailyRows.map(([date, views]) => {
-          const height = Math.max(4, Math.round((views / maxViews) * 164));
-          return `<div style="height:100%;min-width:62px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;" title="${escapeSecurityHtml(formatDisplayDateTH(date))}: ${fmt(views)} ครั้ง">
-            <span style="font-size:10px;color:var(--text-muted);">${fmt(views)}</span>
-            <span style="height:${height}px;width:24px;border-radius:8px 8px 2px 2px;background:linear-gradient(180deg,#25f4ee,#1677ff);box-shadow:0 0 14px rgba(37,244,238,.35);"></span>
-            <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${escapeSecurityHtml(formatDisplayDateTH(date))}</span>
-          </div>`;
-        }).join("");
+    const drawDailyViews = (target, chartRows, color = "#25f4ee") => {
+      if (!target) return;
+      if (!chartRows.length) {
+        target.innerHTML = '<div style="width:100%;text-align:center;color:var(--text-muted);">ยังไม่มีข้อมูลสำหรับสร้างกราฟ</div>';
+        return;
       }
+      const daily = new Map();
+      chartRows.forEach(row => daily.set(row.date, (daily.get(row.date) || 0) + Number(row.views || 0)));
+      const dailyRows = [...daily.entries()].sort(([a], [b]) => a.localeCompare(b));
+      const maxViews = Math.max(...dailyRows.map(([, views]) => views), 1);
+      target.innerHTML = dailyRows.map(([date, views]) => {
+        const height = Math.max(4, Math.round((views / maxViews) * 164));
+        return `<div style="height:100%;min-width:62px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;" title="${escapeSecurityHtml(formatDisplayDateTH(date))}: ${fmt(views)} ครั้ง">
+          <span style="font-size:10px;color:var(--text-muted);">${fmt(views)}</span>
+          <span style="height:${height}px;width:24px;border-radius:8px 8px 2px 2px;background:linear-gradient(180deg,${color},#1677ff);box-shadow:0 0 14px ${color}66;"></span>
+          <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">${escapeSecurityHtml(formatDisplayDateTH(date))}</span>
+        </div>`;
+      }).join("");
+    };
+
+    drawDailyViews(chart, rows);
+    if (channelCharts) {
+      const channelsToChart = selectedChannel ? [selectedChannel] : [...new Set(allRows.map(row => row.channel))].sort((a, b) => a.localeCompare(b, "th"));
+      const chartColors = ["#25f4ee", "#fb7185", "#a78bfa", "#fbbf24", "#34d399", "#60a5fa"];
+      channelCharts.innerHTML = channelsToChart.length ? channelsToChart.map((channel, index) => {
+        const channelRows = allRows.filter(row => row.channel === channel);
+        const totalViews = channelRows.reduce((sum, row) => sum + Number(row.views || 0), 0);
+        const chartId = `tiktokChannelChart_${index}`;
+        return `<section style="background:#0f172a;border:1px solid var(--border-color);border-radius:12px;padding:14px;min-width:0;">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:10px;">
+            <strong style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🎵 ${escapeSecurityHtml(channel)}</strong>
+            <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${fmt(totalViews)} views</span>
+          </div>
+          <div id="${chartId}" style="height:220px;display:flex;align-items:flex-end;gap:10px;padding:8px 4px;overflow-x:auto;"></div>
+        </section>`;
+      }).join("") : '<div style="color:var(--text-muted);padding:14px;">ยังไม่มีข้อมูลแยกตามช่อง</div>';
+      channelsToChart.forEach((channel, index) => drawDailyViews(document.getElementById(`tiktokChannelChart_${index}`), allRows.filter(row => row.channel === channel), chartColors[index % chartColors.length]));
     }
   }
 
@@ -10114,7 +10136,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-08.6";
+  const SITE_BUILD_VERSION = "2026-10-09.1";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
@@ -10165,6 +10187,3 @@ let endIso = "";
 
 </body>
 </html>
-
-
-
