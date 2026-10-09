@@ -2495,6 +2495,7 @@ function auditPopupFlow(step, data){
             <button type="button" onclick="document.getElementById('tiktokFileInput').click()">📁 อัปโหลดไฟล์</button>
             <button type="button" class="btn-clear" onclick="downloadTikTokTemplate_()">📥 ไฟล์ตัวอย่าง</button>
             <button class="btn-success" type="button" onclick="renderTikTokTab_()">🔄 รีเฟรชข้อมูล</button>
+            <button class="btn-danger" type="button" onclick="deleteAllTikTokRows_()">🗑️ ลบทั้งหมด</button>
           </div>
         </div>
         <div class="kpi-grid">
@@ -7228,6 +7229,22 @@ let endIso = "";
     renderTikTokTab_();
   }
 
+  function deleteAllTikTokRows_() {
+    const count = readTikTokRows_().length;
+    if (!count) {
+      const status = document.getElementById("tiktokImportStatus");
+      if (status) status.textContent = "ยังไม่มีข้อมูล TikTok ให้ลบ";
+      return;
+    }
+    if (!window.confirm(`ลบข้อมูล TikTok ทั้งหมด ${count.toLocaleString()} รายการใช่หรือไม่? การลบนี้ไม่สามารถกู้คืนได้`)) return;
+    localStorage.removeItem(TIKTOK_STORAGE_KEY);
+    const filter = document.getElementById("tiktokChannelFilter");
+    if (filter) filter.value = "";
+    const status = document.getElementById("tiktokImportStatus");
+    if (status) status.textContent = `🗑️ ลบข้อมูล TikTok ทั้งหมด ${count.toLocaleString()} รายการแล้ว`;
+    renderTikTokTab_();
+  }
+
   function downloadTikTokTemplate_() {
     const template = [
       ["ชื่อช่อง", "วันที่", "ยอดรับชมวิดีโอ", "ยอดเข้าชมโปรไฟล์", "ถูกใจ", "ความคิดเห็น", "แชร์"],
@@ -10136,7 +10153,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-09.1";
+  const SITE_BUILD_VERSION = "2026-10-09.2";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
