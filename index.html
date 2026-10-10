@@ -7697,13 +7697,9 @@ let endIso = "";
       const row = rows[i];
       if (!row || row.length === 0) continue;
 
-      let rowInRange = false;
-      for (let c = 0; c < row.length; c++) {
-        if (isDateInRange(row[c], startIso, endIso)) {
-          rowInRange = true;
-          break;
-        }
-      }
+      // ห้ามค้นหาวันที่จากทุกคอลัมน์ เพราะบันทึกติดตามอาจมีวันที่ในข้อความ
+      // และจะถูกนับเป็นลูกค้าใหม่ซ้ำกับคอลัมน์วัน/เดือน/ปี
+      const rowInRange = isDateInRange(row[colMap.dateIdx], startIso, endIso);
 
       if (rowInRange) {
         const leadVal = row[colMap.leadIdx] !== undefined ? cleanText(row[colMap.leadIdx]) : "";
@@ -8255,13 +8251,9 @@ let endIso = "";
       const row = rows[i];
       if (!row || row.length === 0) continue;
 
-      let rowMatchesDate = false;
-      for (let c = 0; c < row.length; c++) {
-        if (isExactDateMatch(row[c], targetIso)) {
-          rowMatchesDate = true;
-          break;
-        }
-      }
+      // วันที่ติดตามอาจขึ้นต้นด้วย "9/10/69" ในคอลัมน์อื่นของแถว
+      // จึงต้องตรวจเฉพาะคอลัมน์วัน/เดือน/ปีของรายการเท่านั้น
+      const rowMatchesDate = isExactDateMatch(row[colMap.dateIdx], targetIso);
 
       if (rowMatchesDate) {
         const leadVal = row[colMap.leadIdx] !== undefined ? cleanText(row[colMap.leadIdx]) : "";
