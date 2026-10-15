@@ -3732,9 +3732,15 @@ let endIso = "";
   let rawDeliveryDailyRows = [];
   let bookingDeliverySourceNotice = "";
   // Bump the cache key after source reconciliation so old partial booking snapshots are not reused.
-  const BOOKING_DELIVERY_CACHE_KEY = "ps_booking_delivery_snapshot_v2";
+  const BOOKING_DELIVERY_CACHE_KEY = "ps_booking_delivery_snapshot_v3";
   const BOOKING_DELIVERY_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
   let isBookingDeliveryLoaded = false;
+  // ยอดจองของรายงานนี้ต้องอ้างอิง Master เสมอ เพื่อไม่ให้ไฟล์ Legacy
+  // ที่เป็นเพียงข้อมูลเก่าย้อนหลังทำให้จำนวนคลาดเคลื่อน
+  let bookingDeliveryMasterSummary = null;
+  let bookingDeliveryMasterSummaryKey = "";
+  let bookingDeliveryMasterSummaryPromise = null;
+  let bookingDeliveryMasterSummaryPromiseKey = "";
   // ป้องกันผลตอบกลับที่โหลดช้ากว่านำตัวกรองเก่ากลับมาทับค่าที่ผู้ใช้เพิ่งเลือก
   let bookingDeliveryFiltersTouched = false;
 
@@ -4250,6 +4256,8 @@ let endIso = "";
     deliveryBranchIndex = -1;
     isBookingDeliveryLoaded = false;
     bookingDeliverySourceNotice = "";
+    bookingDeliveryMasterSummary = null;
+    bookingDeliveryMasterSummaryKey = "";
     if (clearCache) sessionStorage.removeItem(BOOKING_DELIVERY_CACHE_KEY);
   }
 
@@ -4448,6 +4456,84 @@ let endIso = "";
     return bookingDeliveryLoadPromise;
   }
 
+  async function fetchBookingDeliveryMasterSummary_(requestKey) {
+    if (bookingDeliveryMasterSummaryPromise && bookingDeliveryMasterSummaryPromiseKey === requestKey) {
+      return bookingDeliveryMasterSummaryPromise;
+    }
+
+    const token = sessionStorage.getItem("ps_auth_token") || "";
+    const bookingMode = document.getElementById("bookingPeriodMode")?.value || "month";
+    const bookingMonth = document.getElementById("bookingMonthSelect")?.value || "";
+    const bookingStartDate = document.getElementById("bookingStartDateSelect")?.value || "";
+    const bookingEndDate = document.getElementById("bookingDateSelect")?.value || "";
+    const commissionMonth = document.getElementById("commissionMonthSelect")?.value || "";
+    if (!token || !commissionMonth || (bookingMode === "month" && !bookingMonth) ||
+      (bookingMode === "range" && (!bookingStartDate || !bookingEndDate))) return null;
+
+    const request = (async () => {
+      try {
+        const res = await fetch(BOOKING_IMPORT_GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "getBookingDeliveryMasterSummary",
+            token,
+            bookingMode,
+            bookingMonth,
+            bookingStartDate,
+            bookingEndDate,
+            commissionMonth
+          }),
+          redirect: "follow",
+          cache: "no-store",
+          referrerPolicy: "no-referrer"
+        });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch (_) { throw new Error("Backend ไม่ได้ส่ง JSON กลับมา"); }
+        if (!res.ok || !data?.success || !data?.summary) {
+          throw new Error(data?.message || `HTTP ${res.status}`);
+        }
+        // ไม่รับผลเก่ามาทับ หลังผู้ใช้เปลี่ยนตัวกรองระหว่างรอคำตอบ
+        if (requestKey !== getBookingDeliveryMasterSummaryKey_()) return null;
+        bookingDeliveryMasterSummary = data.summary;
+        bookingDeliveryMasterSummaryKey = requestKey;
+        bookingDeliverySourceNotice = "";
+        renderBookingDeliveryTab();
+        return data.summary;
+      } catch (error) {
+        console.error("Master booking summary load error:", error);
+        if (requestKey === getBookingDeliveryMasterSummaryKey_()) {
+          bookingDeliveryMasterSummary = null;
+          bookingDeliveryMasterSummaryKey = requestKey;
+          bookingDeliverySourceNotice = "⚠️ โหลดข้อมูล Master สำหรับยอดจองไม่สำเร็จ ระบบจึงยังไม่ปรับยอดจาก Legacy";
+          renderBookingDeliveryTab();
+        }
+        return null;
+      } finally {
+        if (bookingDeliveryMasterSummaryPromiseKey === requestKey) {
+          bookingDeliveryMasterSummaryPromise = null;
+          bookingDeliveryMasterSummaryPromiseKey = "";
+        }
+      }
+    })();
+
+    bookingDeliveryMasterSummaryPromise = request;
+    bookingDeliveryMasterSummaryPromiseKey = requestKey;
+    return request;
+  }
+
+  function getBookingDeliveryMasterSummaryKey_() {
+    return [
+      document.getElementById("bookingPeriodMode")?.value || "month",
+      document.getElementById("bookingMonthSelect")?.value || "",
+      document.getElementById("bookingStartDateSelect")?.value || "",
+      document.getElementById("bookingDateSelect")?.value || "",
+      document.getElementById("commissionMonthSelect")?.value || "",
+      document.getElementById("bookingSourceMode")?.value || "all"
+    ].join("|");
+  }
+
   function renderBookingDeliveryTab() {
     setDefaultBookingPeriod();
     if (!isBookingDeliveryLoaded) {
@@ -4475,6 +4561,18 @@ let endIso = "";
     const sourceMode = document.getElementById("bookingSourceMode")?.value || "all";
     const sourceAllowed = row => sourceMode === "all" || isCompanyPageValue(row?.[2]);
 
+    const masterSummaryKey = [bookingMode, bookingMonth, bookingStartDate, bookingDate, commissionMonth, sourceMode].join("|");
+    // Master summary รองรับยอดเพจบริษัทซึ่งเป็นค่าเริ่มต้นของหน้านี้
+    // เมื่อเปลี่ยนเดือนหรือช่วงวันที่ จะขอผลคำนวณใหม่และวาดซ้ำทันทีที่ได้ผล
+    if (sourceMode === "company" && bookingDeliveryMasterSummaryKey !== masterSummaryKey) {
+      void fetchBookingDeliveryMasterSummary_(masterSummaryKey);
+    }
+    const masterBookingTeams = sourceMode === "company" &&
+      bookingDeliveryMasterSummaryKey === masterSummaryKey &&
+      Array.isArray(bookingDeliveryMasterSummary?.teams)
+      ? bookingDeliveryMasterSummary.teams
+      : null;
+
     // Summary_Booking_Daily: A=วันที่จอง, B=ทีมสาขา, C=ทราบข่าว, D=ยอดจอง
     const filteredBookings = (rawBookingRows || []).filter(row => {
       if (!row || row.length <= 3 || !sourceAllowed(row)) return false;
@@ -4499,7 +4597,11 @@ let endIso = "";
       if (!teamMap.has(key)) teamMap.set(key, { key, name: getTeamBranchDisplay(rawName) });
     }
 
-    (rawBookingRows || []).filter(r => r && r.length > 3 && sourceAllowed(r)).forEach(r => registerTeam(r[1]));
+    if (masterBookingTeams) {
+      masterBookingTeams.forEach(team => registerTeam(team?.name));
+    } else {
+      (rawBookingRows || []).filter(r => r && r.length > 3 && sourceAllowed(r)).forEach(r => registerTeam(r[1]));
+    }
     (rawDeliveryRows || []).filter(r => r && r.length > 3 && sourceAllowed(r)).forEach(r => registerTeam(r[1]));
 
     const activeTeams = Array.from(teamMap.values()).sort((a, b) =>
@@ -4507,10 +4609,17 @@ let endIso = "";
     );
 
     const bookingByTeam = new Map();
-    filteredBookings.forEach(row => {
-      const key = normalizeTeamBranchKey(row[1]);
-      bookingByTeam.set(key, (bookingByTeam.get(key) || 0) + toCount(row[3]));
-    });
+    if (masterBookingTeams) {
+      masterBookingTeams.forEach(team => {
+        const key = normalizeTeamBranchKey(team?.name);
+        bookingByTeam.set(key, toCount(team?.booking));
+      });
+    } else {
+      filteredBookings.forEach(row => {
+        const key = normalizeTeamBranchKey(row[1]);
+        bookingByTeam.set(key, (bookingByTeam.get(key) || 0) + toCount(row[3]));
+      });
+    }
 
     const deliveryByTeam = new Map();
     filteredDeliveries.forEach(row => {
@@ -10181,7 +10290,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-15.2";
+  const SITE_BUILD_VERSION = "2026-10-15.3";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
