@@ -5070,6 +5070,12 @@ let endIso = "";
       return adsMasterDailyLoadPromise;
     }
 
+    // ยอดปล่อยในหน้าสรุปแอดต้องตรงกับแท็บ “ยอดปล่อย / จอง”
+    // จึงใช้ Summary รายเดือนตามเดือนคอมเดียวกันก่อน ไม่ตัดยอดด้วยวันที่ปล่อยจริง
+    // (ยอดจองยังคงนับตามช่วงวันที่ที่ผู้ใช้เลือก)
+    const sharedLoaded = await loadSharedMonthlyAdsBookingDelivery_(startIso, endIso, rangeKey);
+    if (sharedLoaded) return;
+
     const request = requestAdsMasterDailyBookingDelivery_(rangeKey);
     adsMasterDailyLoadPromise = request;
     adsMasterDailyLoadPromiseKey = rangeKey;
@@ -5230,21 +5236,15 @@ let endIso = "";
       const rowDate = normalizeDateToISO(row[0]);
       return rowDate >= startIso && rowDate <= endIso;
     });
-    const hasDailyDeliverySource = Array.isArray(rawDeliveryDailyRows) && rawDeliveryDailyRows.length > 0;
-    const deliveryRows = hasDailyDeliverySource
-      ? rawDeliveryDailyRows.filter(row => {
-          if (!row || row.length < 4 || !isCompanyPageValue(row[2])) return false;
-          const rowDate = normalizeDateToISO(row[0]);
-          return rowDate >= startIso && rowDate <= endIso;
-        })
-      : (rawDeliveryRows || []).filter(row =>
-          row && row.length >= 4 && isCompanyPageValue(row[2]) &&
-          (commissionValueMatchesMonth_(row[0], monthIso) || normalizeCommissionValue(row[0]) === normalizeCommissionValue(commissionMonth))
-        );
+    // ยอดปล่อยใช้ Summary_Delivery_Monthly/Commission Close ตาม “เดือนคอม” เดียวกับแท็บยอดปล่อย / จอง
+    // ไม่ใช้วันที่ปล่อยเป็นตัวตัด เพื่อให้รายงานแอดและรายงานยอดปล่อยแสดงยอดชุดเดียวกัน
+    const deliveryRows = (rawDeliveryRows || []).filter(row =>
+      row && row.length >= 4 && isCompanyPageValue(row[2]) &&
+      (commissionValueMatchesMonth_(row[0], monthIso) || normalizeCommissionValue(row[0]) === normalizeCommissionValue(commissionMonth))
+    );
 
-    // ยอดปล่อยใช้ Summary_Delivery_Daily ตามวันที่เลือก; ใช้ยอดรายเดือนเมื่อชีตรายวันยังว่าง
     adsMasterBookingDailyRows = bookingRows.map(row => [normalizeDateToISO(row[0]), row[1], row[2], row[3]]);
-    adsMasterDeliveryDailyRows = deliveryRows.map(row => [hasDailyDeliverySource ? normalizeDateToISO(row[0]) : startIso, row[1], row[2], row[3]]);
+    adsMasterDeliveryDailyRows = deliveryRows.map(row => [startIso, row[1], row[2], row[3]]);
     adsLegacyBookingDailyRows = adsMasterBookingDailyRows;
     adsLegacyDeliveryDailyRows = adsMasterDeliveryDailyRows;
     adsMasterDailyLoadedDate = rangeKey;
@@ -10145,7 +10145,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-09.2";
+  const SITE_BUILD_VERSION = "2026-10-15.1";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
