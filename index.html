@@ -2335,7 +2335,6 @@ function auditPopupFlow(step, data){
               <div class="comm-select-container" style="padding:8px 10px; display:flex; align-items:center; gap:10px; flex-wrap:nowrap;">
                 <label for="bookingSourceMode" style="font-size:12px; color:var(--text-muted); font-weight:700; white-space:nowrap; margin:0;">แหล่งที่มา</label>
                 <select id="bookingSourceMode" onchange="saveBookingDeliveryFilters_(); renderBookingDeliveryTab()" style="min-width:135px; background:#0f172a; border:1px solid var(--border-color); color:#38bdf8; font-weight:700; cursor:pointer; outline:none; padding:7px 8px; border-radius:7px;">
-                  <option value="all">ทุกแหล่งที่มา</option>
                   <option value="company" selected>เพจบริษัท</option>
                 </select>
               </div>
@@ -4558,7 +4557,7 @@ let endIso = "";
       const n = Number(String(value ?? "").replace(/,/g, "").trim());
       return Number.isFinite(n) ? n : 0;
     };
-    const sourceMode = document.getElementById("bookingSourceMode")?.value || "all";
+    const sourceMode = document.getElementById("bookingSourceMode")?.value || "company";
     const sourceAllowed = row => sourceMode === "all" || isCompanyPageValue(row?.[2]);
 
     const masterSummaryKey = [bookingMode, bookingMonth, bookingStartDate, bookingDate, commissionMonth, sourceMode].join("|");
@@ -4597,11 +4596,7 @@ let endIso = "";
       if (!teamMap.has(key)) teamMap.set(key, { key, name: getTeamBranchDisplay(rawName) });
     }
 
-    if (masterBookingTeams) {
-      masterBookingTeams.forEach(team => registerTeam(team?.name));
-    } else {
-      (rawBookingRows || []).filter(r => r && r.length > 3 && sourceAllowed(r)).forEach(r => registerTeam(r[1]));
-    }
+    if (masterBookingTeams) masterBookingTeams.forEach(team => registerTeam(team?.name));
     (rawDeliveryRows || []).filter(r => r && r.length > 3 && sourceAllowed(r)).forEach(r => registerTeam(r[1]));
 
     const activeTeams = Array.from(teamMap.values()).sort((a, b) =>
@@ -4631,7 +4626,9 @@ let endIso = "";
     const totalDeliveries = Array.from(deliveryByTeam.values()).reduce((a, b) => a + b, 0);
     let html = "";
 
-    if (activeTeams.length === 0) {
+    if (sourceMode === "company" && !masterBookingTeams) {
+      html = `<tr><td class="empty-row" colspan="4">⏳ กำลังอ่านยอดจองจาก Master...</td></tr>`;
+    } else if (activeTeams.length === 0) {
       html = `<tr><td class="empty-row" colspan="4">ไม่พบข้อมูล “เพจบริษัท” ตามช่วงยอดจอง / เดือนคอมที่เลือก</td></tr>`;
     } else {
       activeTeams.forEach((team, idx) => {
@@ -10290,7 +10287,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-15.3";
+  const SITE_BUILD_VERSION = "2026-10-15.4";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
