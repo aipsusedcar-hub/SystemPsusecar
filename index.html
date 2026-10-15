@@ -2212,6 +2212,10 @@ function auditPopupFlow(step, data){
           </div>
         </div>
         <div id="adsBookingDeliveryCompareDetail" style="display:none !important;"></div>
+        <section id="adsDeliveryDailyPanel" style="margin:0 0 12px;padding:12px 14px;border:1px solid var(--border-color);border-radius:10px;background:#0f172a;">
+          <div style="font-size:13px;font-weight:800;margin-bottom:8px;">📅 ยอดปล่อยรายวัน</div>
+          <div id="adsDeliveryDailyBody" style="font-size:12px;color:var(--text-muted);">รอโหลดข้อมูลยอดปล่อยรายวัน</div>
+        </section>
         <div class="table-responsive">
           <table class="styled-report-table">
             <thead>
@@ -4974,6 +4978,43 @@ let endIso = "";
     return { map, unmapped };
   }
 
+  function renderAdsDeliveryDailySummary_(startIso, endIso) {
+    const body = document.getElementById("adsDeliveryDailyBody");
+    if (!body) return;
+    const rangeKey = `${startIso}|${endIso}`;
+    if (!isAdsMasterDailyLoaded || adsMasterDailyLoadedDate !== rangeKey) {
+      body.textContent = "กำลังโหลดข้อมูลยอดปล่อยรายวัน...";
+      return;
+    }
+
+    const byDate = new Map();
+    (adsMasterDeliveryDailyRows || []).forEach(row => {
+      const date = normalizeDateToISO(row?.[0]);
+      const branch = cleanText(row?.[1]) || "ไม่ระบุสาขา";
+      const source = row?.[2];
+      const count = Number(String(row?.[3] || "").replace(/,/g, "")) || 0;
+      if (!date || date < startIso || date > endIso || !isCompanyPageValue(source) || count <= 0) return;
+      const day = byDate.get(date) || { count: 0, branches: new Map() };
+      day.count += count;
+      day.branches.set(branch, (day.branches.get(branch) || 0) + count);
+      byDate.set(date, day);
+    });
+
+    const days = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+    if (!days.length) {
+      body.innerHTML = `<span style="color:#fbbf24;">ไม่พบยอดปล่อยเพจบริษัทในช่วง ${escapeSecurityHtml(formatDisplayDateTH(startIso))} - ${escapeSecurityHtml(formatDisplayDateTH(endIso))}</span>`;
+      return;
+    }
+    const total = days.reduce((sum, [, item]) => sum + item.count, 0);
+    body.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;">${days.map(([date, item]) => {
+      const branches = [...item.branches.entries()].map(([name, count]) => `${escapeSecurityHtml(name)} ${count}`).join(" • ");
+      return `<div style="min-width:170px;flex:1;padding:9px 10px;border:1px solid #334155;border-radius:8px;background:#162238;">
+        <div style="display:flex;justify-content:space-between;gap:8px;font-weight:800;color:#e2e8f0;"><span>${escapeSecurityHtml(formatDisplayDateTH(date))}</span><span style="color:#34d399;">${item.count.toLocaleString()} คัน</span></div>
+        <div style="margin-top:4px;font-size:10px;color:#94a3b8;line-height:1.45;">${branches}</div>
+      </div>`;
+    }).join("")}</div><div style="margin-top:8px;font-size:11px;font-weight:800;color:#38bdf8;">รวมยอดปล่อยตามวันที่เลือก: ${total.toLocaleString()} คัน</div>`;
+  }
+
 
   function setAdsBookingDeliveryDisplayMode(mode) {
     adsBookingDeliveryDisplayMode = ["compare", "master", "legacy"].includes(mode) ? mode : "compare";
@@ -5069,12 +5110,6 @@ let endIso = "";
     if (!force && adsMasterDailyLoadPromise && adsMasterDailyLoadPromiseKey === rangeKey) {
       return adsMasterDailyLoadPromise;
     }
-
-    // ยอดปล่อยในหน้าสรุปแอดต้องตรงกับแท็บ “ยอดปล่อย / จอง”
-    // จึงใช้ Summary รายเดือนตามเดือนคอมเดียวกันก่อน ไม่ตัดยอดด้วยวันที่ปล่อยจริง
-    // (ยอดจองยังคงนับตามช่วงวันที่ที่ผู้ใช้เลือก)
-    const sharedLoaded = await loadSharedMonthlyAdsBookingDelivery_(startIso, endIso, rangeKey);
-    if (sharedLoaded) return;
 
     const request = requestAdsMasterDailyBookingDelivery_(rangeKey);
     adsMasterDailyLoadPromise = request;
@@ -5285,6 +5320,7 @@ let endIso = "";
     const legacyDeliveryPack = masterReady
       ? buildAdsMasterDailyMap(adsLegacyDeliveryDailyRows, startIso, endIso)
       : { map: new Map(), unmapped: new Map() };
+    renderAdsDeliveryDailySummary_(startIso, endIso);
     
     const tbody = document.getElementById("reportTableBody");
     tbody.innerHTML = "";
@@ -10145,7 +10181,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-15.1";
+  const SITE_BUILD_VERSION = "2026-10-15.2";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
