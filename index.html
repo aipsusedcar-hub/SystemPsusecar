@@ -2375,7 +2375,7 @@ function auditPopupFlow(step, data){
         </div>
 
         <div style="background:#0f172a; border:1px solid var(--border-color); border-radius:10px; padding:12px 14px; color:var(--text-muted); font-size:12px;">
-          ℹ️ รายงานนี้อ่านยอดจองจาก Booking Snapshot และยอดปล่อยจาก Commission_Close_Current ผ่าน Apps Script • หากยังไม่มีเดือนคอมใน Current ระบบจะแสดงคำเตือนและใช้ Summary_Delivery_Monthly fallback
+          ℹ️ รายงานนี้อ่านยอดจองและยอดปล่อยจาก Master History ที่อัปเดตล่าสุด • ยอดจองกรองตามวันที่จอง และยอดปล่อยกรองตามเดือนคอม
         </div>
         <span id="detailCountBadge" style="display:none;">พบ 0 รายการ</span>
         <table style="display:none;"><tbody id="bookingDeliveryDetailTbody"></tbody></table>
@@ -4341,14 +4341,14 @@ let endIso = "";
     // จะต้องไม่กู้ค่าที่บันทึกไว้เดิมกลับมาทับภายหลัง
     const mayRestoreSavedFilters = !bookingDeliveryFiltersTouched;
     if (bookingDeliveryLoadPromise) return bookingDeliveryLoadPromise;
-    if (!force && isBookingDeliveryLoaded && rawBookingRows.length && rawDeliveryRows.length &&
+    if (!force && isBookingDeliveryLoaded && rawBookingRows.length &&
       (!includeDeliveryDailyRows || rawDeliveryDailyRows.length)) {
       return Promise.resolve(true);
     }
 
     const summaryTbody = document.getElementById("bookingDeliverySummaryTbody");
     const keepCachedRowsVisible = preserveRenderedData && isBookingDeliveryLoaded &&
-      rawBookingRows.length > 0 && rawDeliveryRows.length > 0;
+      rawBookingRows.length > 0;
     if (summaryTbody && !keepCachedRowsVisible) {
       summaryTbody.innerHTML = '<tr><td class="empty-row" colspan="4">⏳ กำลังอ่าน Summary Sheets ผ่าน Apps Script...</td></tr>';
     }
@@ -4361,7 +4361,7 @@ let endIso = "";
         // googleusercontent.com; จึงส่ง action/token ผ่าน query string สำหรับรายงานนี้
         // เพื่อให้ backend ยังทราบคำสั่งเดิมครบถ้วน
         const summaryParams = new URLSearchParams({
-          summary: "commission-current-v28",
+          summary: "master-history-v29",
           action: "getBookingDeliverySummarySheets",
           schemaVersion: "3",
           token: String(token || ""),
@@ -4390,9 +4390,6 @@ let endIso = "";
         } else {
           bookingDeliverySourceNotice = "";
         }
-        if (!usesMonthlyFallback && deliverySheet !== "Commission_Close_Current") {
-          throw new Error(`Apps Script ไม่ได้ยืนยัน Commission_Close_Current (deliverySheet: ${deliverySheet || "ไม่ระบุ"}; source: ${sourceLabel})`);
-        }
 
         rawBookingRows = Array.isArray(data.bookingRows) ? data.bookingRows : [];
         rawDeliveryRows = Array.isArray(data.deliveryRows) ? data.deliveryRows : [];
@@ -4407,7 +4404,8 @@ let endIso = "";
           console.warn("Booking summary backend is not the snapshot-safe source:", data.source, data.meta || {});
         }
         if (!rawBookingRows.length) throw new Error(`ชีท ${BOOKING_SUMMARY_SHEET} ไม่มีข้อมูล`);
-        if (!rawDeliveryRows.length) throw new Error("Commission_Close_Current ไม่มีข้อมูลยอดปล่อย");
+        // ยอดปล่อยบนรายงานใช้ Master โดยตรง จึงไม่บล็อกการแสดงผล
+        // หาก Commission_Close_Current ยังไม่มีหรือยังไม่ถูกนำเข้าในเดือนนั้น
 
         isBookingDeliveryLoaded = true;
         saveBookingDeliveryCache_();
@@ -4566,7 +4564,7 @@ let endIso = "";
     if (sourceMode === "company" && bookingDeliveryMasterSummaryKey !== masterSummaryKey) {
       void fetchBookingDeliveryMasterSummary_(masterSummaryKey);
     }
-    const masterBookingTeams = sourceMode === "company" &&
+    const masterSummaryTeams = sourceMode === "company" &&
       bookingDeliveryMasterSummaryKey === masterSummaryKey &&
       Array.isArray(bookingDeliveryMasterSummary?.teams)
       ? bookingDeliveryMasterSummary.teams
@@ -4596,16 +4594,19 @@ let endIso = "";
       if (!teamMap.has(key)) teamMap.set(key, { key, name: getTeamBranchDisplay(rawName) });
     }
 
-    if (masterBookingTeams) masterBookingTeams.forEach(team => registerTeam(team?.name));
-    (rawDeliveryRows || []).filter(r => r && r.length > 3 && sourceAllowed(r)).forEach(r => registerTeam(r[1]));
+    if (masterSummaryTeams) {
+      masterSummaryTeams.forEach(team => registerTeam(team?.name));
+    } else {
+      (rawDeliveryRows || []).filter(r => r && r.length > 3 && sourceAllowed(r)).forEach(r => registerTeam(r[1]));
+    }
 
     const activeTeams = Array.from(teamMap.values()).sort((a, b) =>
       a.name.localeCompare(b.name, "th", { numeric: true, sensitivity: "base" })
     );
 
     const bookingByTeam = new Map();
-    if (masterBookingTeams) {
-      masterBookingTeams.forEach(team => {
+    if (masterSummaryTeams) {
+      masterSummaryTeams.forEach(team => {
         const key = normalizeTeamBranchKey(team?.name);
         bookingByTeam.set(key, toCount(team?.booking));
       });
@@ -4617,17 +4618,24 @@ let endIso = "";
     }
 
     const deliveryByTeam = new Map();
-    filteredDeliveries.forEach(row => {
-      const key = normalizeTeamBranchKey(row[1]);
-      deliveryByTeam.set(key, (deliveryByTeam.get(key) || 0) + toCount(row[3]));
-    });
+    if (masterSummaryTeams) {
+      masterSummaryTeams.forEach(team => {
+        const key = normalizeTeamBranchKey(team?.name);
+        deliveryByTeam.set(key, toCount(team?.delivery));
+      });
+    } else {
+      filteredDeliveries.forEach(row => {
+        const key = normalizeTeamBranchKey(row[1]);
+        deliveryByTeam.set(key, (deliveryByTeam.get(key) || 0) + toCount(row[3]));
+      });
+    }
 
     const totalBookings = Array.from(bookingByTeam.values()).reduce((a, b) => a + b, 0);
     const totalDeliveries = Array.from(deliveryByTeam.values()).reduce((a, b) => a + b, 0);
     let html = "";
 
-    if (sourceMode === "company" && !masterBookingTeams) {
-      html = `<tr><td class="empty-row" colspan="4">⏳ กำลังอ่านยอดจองจาก Master...</td></tr>`;
+    if (sourceMode === "company" && !masterSummaryTeams) {
+      html = `<tr><td class="empty-row" colspan="4">⏳ กำลังอ่านยอดจองและยอดปล่อยจาก Master...</td></tr>`;
     } else if (activeTeams.length === 0) {
       html = `<tr><td class="empty-row" colspan="4">ไม่พบข้อมูล “เพจบริษัท” ตามช่วงยอดจอง / เดือนคอมที่เลือก</td></tr>`;
     } else {
@@ -10297,7 +10305,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-16.2";
+  const SITE_BUILD_VERSION = "2026-10-16.3";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
