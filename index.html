@@ -9804,36 +9804,20 @@ let endIso = "";
   }
 
   function bdv3BuildSnapshotCases(sheetInfos) {
-    const base = sheetInfos.booking.canonicalRows;
-    const checks = [];
-    ["signed", "approved", "delivery"].forEach(key => {
-      const result = bdv3SameKeyMultiset(base, sheetInfos[key].canonicalRows);
-      checks.push({ key, ...result });
-    });
-
-    const mismatch = checks.find(x => !x.same);
-    if (mismatch) {
-      return { valid: false, cases: [], conflicts: [], message: `4 ชีทมีรายการไม่ตรงกัน (${sheetInfos[mismatch.key].label}: ${mismatch.reason})` };
-    }
-
+    // ไฟล์รายวันแต่ละชีตเป็นคนละขั้นของงาน จึงมีจำนวนแถวต่างกันได้
+    // รวมรายการแบบ union แล้วเติมข้อมูลจาก เซ็นต์/อนุมัติ/ปล่อยลงในเคสเดียวกัน
+    // ห้ามบล็อกเพียงเพราะจำนวนแถวไม่เท่ากัน
     const baseGroups = new Map();
-    base.forEach(row => {
-      const key = bdv3CaseIdentity(row);
-      if (!baseGroups.has(key)) baseGroups.set(key, []);
-      const occurrence = baseGroups.get(key).length + 1;
-      const cloned = bdv3BlankCase();
-      BDV3_BUSINESS_FIELDS.forEach(field => { cloned[field] = bdv3Text(row[field]); });
-      cloned.__sourceIdentity = key;
-      cloned.__occurrence = occurrence;
-      cloned.__sourceRow = row.__sourceRow;
-      baseGroups.get(key).push(cloned);
-    });
-
     const conflicts = [];
-    ["signed", "approved", "delivery"].forEach(sheetKey => {
+    const unresolved = [];
+    ["booking", "signed", "approved", "delivery"].forEach(sheetKey => {
       const otherGroups = new Map();
       sheetInfos[sheetKey].canonicalRows.forEach(row => {
         const key = bdv3CaseIdentity(row);
+        if (!key) {
+          unresolved.push(`${sheetInfos[sheetKey].label} แถว ${Number(row.__sourceRow || 0)}`);
+          return;
+        }
         if (!otherGroups.has(key)) otherGroups.set(key, []);
         otherGroups.get(key).push(row);
       });
@@ -9841,10 +9825,29 @@ let endIso = "";
       otherGroups.forEach((rows, key) => {
         const targets = baseGroups.get(key) || [];
         rows.forEach((row, index) => {
-          if (targets[index]) bdv3MergeCaseFields(targets[index], row, conflicts, sheetInfos[sheetKey].label, index + 1);
+          if (targets[index]) {
+            bdv3MergeCaseFields(targets[index], row, conflicts, sheetInfos[sheetKey].label, index + 1);
+            return;
+          }
+          const cloned = bdv3BlankCase();
+          BDV3_BUSINESS_FIELDS.forEach(field => { cloned[field] = bdv3Text(row[field]); });
+          cloned.__sourceIdentity = key;
+          cloned.__occurrence = targets.length + 1;
+          cloned.__sourceRow = row.__sourceRow;
+          targets.push(cloned);
+          baseGroups.set(key, targets);
         });
       });
     });
+
+    if (unresolved.length) {
+      return {
+        valid: false,
+        cases: [],
+        conflicts: [],
+        message: `พบ ${unresolved.length.toLocaleString()} แถวที่ระบุตัวตนไม่ได้ (${unresolved.slice(0, 3).join(" / ")})`
+      };
+    }
 
     if (conflicts.length) {
       return {
@@ -9864,7 +9867,7 @@ let endIso = "";
       cases.push(clean);
     }));
 
-    return { valid: true, cases, conflicts: [], message: "4 ชีทตรงกัน" };
+    return { valid: true, cases, conflicts: [], message: `รวม ${cases.length.toLocaleString()} รายการจาก 4 ชีทสำเร็จ` };
   }
 
   function bdv3InferSnapshotDate(fileName) {
@@ -10135,7 +10138,7 @@ let endIso = "";
 
       status.className = "import-status ok";
       status.textContent =
-        `✔ ตรวจไฟล์ผ่าน — 4 ชีทตรงกัน • ${snapshot.cases.length.toLocaleString()} เคส • Snapshot ${snapshotDate}` +
+        `✔ ตรวจไฟล์ผ่าน — ${snapshot.message} • Snapshot ${snapshotDate}` +
         (globalAutoFixes2051 ? ` • แก้ปี 2051→2026 อัตโนมัติ ${globalAutoFixes2051} จุด` : "") +
         ` • พร้อมอัปเดต Master History`;
       sendBtn.disabled = false;
@@ -10294,7 +10297,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-16.1";
+  const SITE_BUILD_VERSION = "2026-10-16.2";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
