@@ -2375,7 +2375,7 @@ function auditPopupFlow(step, data){
         </div>
 
         <div style="background:#0f172a; border:1px solid var(--border-color); border-radius:10px; padding:12px 14px; color:var(--text-muted); font-size:12px;">
-          ℹ️ รายงานนี้อ่านยอดจองและยอดปล่อยจาก Master History ที่อัปเดตล่าสุด • ยอดจองกรองตามวันที่จอง และยอดปล่อยกรองตามเดือนคอม
+          ℹ️ รายงานนี้อ่านยอดจองและยอดปล่อยจาก Master History ที่อัปเดตล่าสุด • ยอดจองกรองตามวันที่จอง และยอดปล่อยต้องมีวันที่ปล่อยจริงพร้อมเดือนคอมที่เลือก
         </div>
         <span id="detailCountBadge" style="display:none;">พบ 0 รายการ</span>
         <table style="display:none;"><tbody id="bookingDeliveryDetailTbody"></tbody></table>
@@ -4491,6 +4491,20 @@ let endIso = "";
         if (!res.ok || !data?.success || !data?.summary) {
           throw new Error(data?.message || `HTTP ${res.status}`);
         }
+        // กติกายอดปล่อย: ต้องมีวันที่ปล่อยจริง และเดือนคอมอยู่ในเดือนที่เลือก
+        // ห้ามนับเพียงเพราะระบุเดือนคอมไว้ล่วงหน้า
+        const released = await fetchReleasedDeliveryForCommissionMonth_(token, commissionMonth);
+        const deliveryByTeam = released.deliveriesByTeam;
+        data.summary.teams = (data.summary.teams || []).map(team => ({
+          ...team,
+          delivery: deliveryByTeam.get(normalizeTeamBranchKey(team?.name)) || 0
+        }));
+        data.summary.delivery = released.total;
+        data.summary.rules = {
+          ...(data.summary.rules || {}),
+          deliveryFilter: "วันที่ปล่อยจริงอยู่ในเดือน และเดือนคอมตรงกับเดือนที่เลือก",
+          deliveryDateRequired: true
+        };
         // ไม่รับผลเก่ามาทับ หลังผู้ใช้เปลี่ยนตัวกรองระหว่างรอคำตอบ
         if (requestKey !== getBookingDeliveryMasterSummaryKey_()) return null;
         bookingDeliveryMasterSummary = data.summary;
@@ -4518,6 +4532,45 @@ let endIso = "";
     bookingDeliveryMasterSummaryPromise = request;
     bookingDeliveryMasterSummaryPromiseKey = requestKey;
     return request;
+  }
+
+  async function fetchReleasedDeliveryForCommissionMonth_(token, commissionMonth) {
+    const match = String(commissionMonth || "").match(/^(\d{4})-(\d{2})$/);
+    if (!match) throw new Error("เดือนไม่ถูกต้อง");
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const startDate = `${commissionMonth}-01`;
+    const endDate = `${commissionMonth}-${String(new Date(year, month, 0).getDate()).padStart(2, "0")}`;
+    const res = await fetch(BOOKING_IMPORT_GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "getAdsExpenseBookingDeliveryCompareDaily",
+        token,
+        date: startDate,
+        startDate,
+        endDate,
+        source: "เพจบริษัท"
+      }),
+      redirect: "follow",
+      cache: "no-store",
+      referrerPolicy: "no-referrer"
+    });
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); } catch (_) { throw new Error("Backend ยอดปล่อยไม่ได้ส่ง JSON กลับมา"); }
+    if (!res.ok || !data?.success || !Array.isArray(data?.master?.deliveryRows)) {
+      throw new Error(data?.message || `HTTP ${res.status}`);
+    }
+
+    const deliveriesByTeam = new Map();
+    data.master.deliveryRows.forEach(row => {
+      const team = cleanText(row?.[1]);
+      if (!team) return;
+      const key = normalizeTeamBranchKey(team);
+      deliveriesByTeam.set(key, (deliveriesByTeam.get(key) || 0) + Number(row?.[3] || 1));
+    });
+    return { deliveriesByTeam, total: Number(data?.master?.totals?.delivery || 0) };
   }
 
   function getBookingDeliveryMasterSummaryKey_() {
@@ -10305,7 +10358,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-16.3";
+  const SITE_BUILD_VERSION = "2026-10-17.1";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
