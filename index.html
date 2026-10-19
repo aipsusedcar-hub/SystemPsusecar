@@ -7548,10 +7548,16 @@ let endIso = "";
         if (mainToolbar) mainToolbar.style.display = "flex";
         if (statusBar) statusBar.style.display = "flex";
         filterSpan.style.display = "none";
-        const adsMonthChanged = setAdsExpenseCurrentMonthRange_();
+        setAdsExpenseCurrentMonthRange_();
         fetchAdsDataDirectly();
         fetchAdsMasterDailyBookingDelivery();
-        if (adsMonthChanged) fetchAllData();
+        // ยอดเบอร์ในหน้าแอดนับจากชีทสาขา จึงต้องโหลดข้อมูลสาขาทุกครั้ง
+        // ไม่ใช่เฉพาะเมื่อเปลี่ยนเดือน มิฉะนั้นจะเหลือ "-" จากแคชที่ยังว่าง
+        void fetchAllData().then(() => {
+          renderReportTable();
+          const receipt = document.getElementById("adsReceiptContainer");
+          if (receipt && receipt.style.display !== "none") generateAdsReceiptContent();
+        });
       } else if (tabId === "adminAnalysisTab") {
         document.querySelectorAll(".tab-btn")[4].classList.add("active");
         document.getElementById("adminAnalysisTab").classList.add("active");
