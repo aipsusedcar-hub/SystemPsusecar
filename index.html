@@ -7591,8 +7591,14 @@ let endIso = "";
         if (statusBar) statusBar.style.display = "none";
         filterSpan.style.display = "none";
 
-        if (!restoreBookingDeliveryFilters_()) syncBookingDeliveryFiltersToMainRange_({ render: false });
+        // ให้หน้านี้ใช้ช่วงวันที่หลักเดียวกับหน้าแอดทุกครั้งที่เปิด
+        // ไม่กู้ค่าค้างจากรอบก่อน เพราะค่าค้างอาจเป็นช่วง 1-18 ทำให้ยอดไม่ตรง 66/8
+        setAdsExpenseCurrentMonthRange_();
+        bookingDeliveryFiltersTouched = true;
+        syncBookingDeliveryFiltersToMainRange_({ render: false });
+        invalidateBookingDeliveryData();
         renderBookingDeliveryTab();
+        void fetchBookingDeliveryData({ force: true });
       } else if (tabId === "topSalesTab") {
         document.querySelectorAll(".tab-btn")[10].classList.add("active");
         document.getElementById("topSalesTab").classList.add("active");
