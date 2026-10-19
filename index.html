@@ -5516,17 +5516,7 @@ let endIso = "";
         const bdCount = getPopupBookingDeliveryCount(b.name, startIso, endIso);
         teamBooking += bdCount.booking;
         teamDelivery += bdCount.delivery;
-        let phoneCount = 0;
-        const activeMainRows = rawRows.filter(row => {
-          if (!rowMatchesDateRange(row, startIso, endIso)) return false;
-          const valG = getMainLeadValue_(row);
-          return valG !== "" && valG !== "-" && valG !== "null" && valG !== "เบอร์โทร/ไอดีไลน์" && valG !== "ลำดับ";
-        });
-
-        const targetCfg = CURRENT_CONFIGS.find(cfg => !cfg.isMain && (cfg.name === b.name || (b.name === "นครพนมพี่ต้น" && cfg.name === "นครพนมทีม C")));
-        if (targetCfg && branchColIndex !== -1) {
-          phoneCount = activeMainRows.filter(row => checkBranchMatch(row[branchColIndex], targetCfg)).length;
-        }
+        const phoneCount = getAdsPhoneCountForBranch_(b.name, startIso, endIso);
 
 
         const branchMasterKey = normalizeAdsMasterBranchKey(b.name);
@@ -5758,37 +5748,38 @@ let endIso = "";
       };
     }
 
-    let booking = 0;
-    let delivery = 0;
+    // ห้าม fallback ไปยัง rawBookingRows/rawDeliveryRows เพราะเป็นชุดเก่า
+    // ซึ่งทำให้ใบสรุปแสดงยอดจอง 7 คัน ทั้งที่หน้าจอง/ปล่อยใช้ Snapshot ล่าสุด
+    return {booking: 0, delivery: 0};
+  }
 
-    (rawBookingRows || []).forEach(row => {
-      if (!row || row.length < 4) return;
-      if (!isCompanyPageValue(row[2])) return;
-      const d = normalizeDateToISO(row[0]);
-      if (d < startIso || d > endIso) return;
-      if (normalizeAdsMasterBranchKey(row[1]) === target) booking += Number(row[3]) || 0;
-    });
-
-    (rawDeliveryRows || []).forEach(row => {
-      if (!row || row.length < 4) return;
-      if (!isCompanyPageValue(row[2])) return;
-      const d = normalizeDateToISO(row[0]);
-      if (d < startIso || d > endIso) return;
-      if (normalizeAdsMasterBranchKey(row[1]) === target) delivery += Number(row[3]) || 0;
-    });
-
-    return {booking, delivery};
+  function getAdsPhoneCountForBranch_(branchName, startIso, endIso) {
+    // ข้อมูลเบอร์ต้องนับจากชีทของสาขาโดยตรง ไม่ใช้ชีทกลาง
+    // เพราะชีทกลางอาจมีเฉพาะบางสาขาและทำให้แสดง "-" อย่างผิดพลาด
+    const cfg = CURRENT_CONFIGS.find(item => !item.isMain && (
+      item.name === branchName ||
+      (branchName === "นครพนมพี่ต้น" && item.name === "นครพนมทีม C")
+    ));
+    return cfg ? getBranchRowsInRange(cfg.name, startIso, endIso).length : 0;
   }
 
   function generateAdsReceiptContent() {
     const startIso = document.getElementById("adsReceiptStartDate").value;
     const endIso = document.getElementById("adsReceiptEndDate").value;
+    const masterReady = isAdsMasterDailyLoaded && adsMasterDailyLoadedDate === `${startIso}|${endIso}`;
     
     const tbodySummary = document.getElementById("adsReceiptTableBody");
     const tbodyDetail = document.getElementById("adsDetailReceiptTableBody");
     
     tbodySummary.innerHTML = "";
     tbodyDetail.innerHTML = "";
+
+    if (!masterReady) {
+      const loading = '<tr><td class="empty-row" colspan="8">กำลังโหลดข้อมูลจอง / ปล่อยจากชุดเดียวกับหน้า ยอดปล่อย / จอง...</td></tr>';
+      tbodySummary.innerHTML = loading;
+      tbodyDetail.innerHTML = '<tr><td class="empty-row" colspan="9">กำลังโหลดข้อมูลจอง / ปล่อยจากชุดเดียวกับหน้า ยอดปล่อย / จอง...</td></tr>';
+      return;
+    }
 
     if (!isAdsLoaded) {
       tbodySummary.innerHTML = `<tr><td class="empty-row" colspan="5">กำลังโหลดข้อมูล...</td></tr>`;
@@ -5862,17 +5853,7 @@ let endIso = "";
         const bdCount = getPopupBookingDeliveryCount(b.name, startIso, endIso);
         teamBooking += bdCount.booking;
         teamDelivery += bdCount.delivery;
-        let phoneCount = 0;
-        const activeMainRows = rawRows.filter(row => {
-          if (!rowMatchesDateRange(row, startIso, endIso)) return false;
-          const valG = getMainLeadValue_(row);
-          return valG !== "" && valG !== "-" && valG !== "null" && valG !== "เบอร์โทร/ไอดีไลน์" && valG !== "ลำดับ";
-        });
-
-        const targetCfg = CURRENT_CONFIGS.find(cfg => !cfg.isMain && (cfg.name === b.name || (b.name === "นครพนมพี่ต้น" && cfg.name === "นครพนมทีม C")));
-        if (targetCfg && branchColIndex !== -1) {
-          phoneCount = activeMainRows.filter(row => checkBranchMatch(row[branchColIndex], targetCfg)).length;
-        }
+        const phoneCount = getAdsPhoneCountForBranch_(b.name, startIso, endIso);
 
 
         teamMsg += messages;
