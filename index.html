@@ -3197,6 +3197,9 @@ let endIso = "";
 
 
   const MAIN_SHEET_ID = "1TY8ViPdFsEscTC7_Pg0nzLdep-b9nr_p8HBrQ3U7YsE";
+  // ชีทกลางที่ยืนยันแล้วของเดือนตุลาคม 2026 ใช้เป็นทางสำรอง
+  // เมื่อการดึง GID กลางช้า เพื่อไม่ให้คอลัมน์เบอร์หายทั้งหน้าแอด
+  const VERIFIED_MAIN_GIDS = { oct26: "1972428133" };
   const ADS_SHEET_ID = "157U3mH6giiofpylO7PzdWuuM1HTMgSnU8Ljs6qfVA3g";
   const ADS_GID = "924564040";
   // SECURITY NOTE: Sheet IDs / Apps Script URLs are public identifiers in client-side HTML.
@@ -6383,8 +6386,9 @@ let endIso = "";
     }
 
     const db = MONTHLY_GID_DATABASE[selectedMonth];
+    const verifiedMainGid = VERIFIED_MAIN_GIDS[selectedMonth] || "";
     CURRENT_CONFIGS = [
-      { name: "ชีทกลาง (ศูนย์รวม)", id: MAIN_SHEET_ID, gid: db.mainGid !== undefined ? db.mainGid : "", isMain: true }
+      { name: "ชีทกลาง (ศูนย์รวม)", id: MAIN_SHEET_ID, gid: db.mainGid || verifiedMainGid, isMain: true }
     ];
 
     BRANCH_NAMES.forEach(name => {
