@@ -5760,7 +5760,18 @@ let endIso = "";
       item.name === branchName ||
       (branchName === "นครพนมพี่ต้น" && item.name === "นครพนมทีม C")
     ));
-    return cfg ? getBranchRowsInRange(cfg.name, startIso, endIso).length : 0;
+    const directCount = cfg ? getBranchRowsInRange(cfg.name, startIso, endIso).length : 0;
+    if (directCount > 0) return directCount;
+
+    // บางเดือนยังไม่มี GID ของชีทสาขา จึงอ่านเบอร์จากชีทกลางเป็นทางสำรอง
+    // ใช้การเทียบชื่อสาขาแบบ normalize เพื่อรองรับ "ทีมขอนแก่น" / "ขอนแก่น"
+    if (branchColIndex < 0 || mainLeadColIndex < 0 || !cfg) return 0;
+    return rawRows.filter(row => {
+      if (!rowMatchesDateRange(row, startIso, endIso)) return false;
+      const lead = getMainLeadValue_(row);
+      if (!lead || lead === "-" || lead === "null" || lead === "เบอร์โทร/ไอดีไลน์" || lead === "ลำดับ") return false;
+      return checkBranchMatch(row[branchColIndex], cfg);
+    }).length;
   }
 
   function generateAdsReceiptContent() {
@@ -8349,10 +8360,13 @@ let endIso = "";
 
   function checkBranchMatch(branchText, cfg) {
     const target = cleanText(branchText).toLowerCase();
-    return cfg.aliases.some(alias => {
+    if (cfg.aliases.some(alias => {
       const a = cleanText(alias).toLowerCase();
       return target === a;
-    });
+    })) return true;
+
+    const targetKey = normalizeAdsMasterBranchKey(branchText);
+    return cfg.aliases.some(alias => normalizeAdsMasterBranchKey(alias) === targetKey);
   }
 
   function applyFilters({ forceAds = false } = {}) {
