@@ -6205,6 +6205,12 @@ let endIso = "";
     "dec26": { label: "ธ.ค.26", aliases: ["ธ.ค.26", "ธ.ค.2026", "ธ.ค.69", "ธ.ค.2569", "ธันวาคม 2026", "ธันวาคม 69", "ธันวาคม 2569"] }
   };
 
+  // กรณีมีนบุรี: ตัวตรวจ GID เก่าคืน GID ของแท็บกรกฎาคมแทนแท็บ พ.ย.26
+  // GID นี้ตรวจแล้วว่ามีข้อมูลเดือนพฤศจิกายน 2026 จริง จึงกันไม่ให้การซิงก์สดเขียนทับค่าที่ถูกต้อง
+  const MONTHLY_GID_OVERRIDES = {
+    nov26: { "มีนบุรี": "1391753655" }
+  };
+
   function normalizeSheetTitleForMatch_(value) {
     return cleanText(value)
       .toLowerCase()
@@ -6471,6 +6477,16 @@ let endIso = "";
   }
 
   async function fetchOneMonthlyGid_(cfg, selectedMonth) {
+    const overrideGid = MONTHLY_GID_OVERRIDES[selectedMonth]?.[cfg.name];
+    if (overrideGid) {
+      return {
+        name: cfg.name,
+        found: true,
+        gid: overrideGid,
+        title: MONTH_SHEET_TARGETS[selectedMonth]?.label || selectedMonth,
+        error: ""
+      };
+    }
     try {
       const sheets = await fetchGidSheetList_(cfg);
       const found = findSheetForSelectedMonth_(sheets, selectedMonth);
