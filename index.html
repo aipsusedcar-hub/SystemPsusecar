@@ -5560,7 +5560,7 @@ let endIso = "";
             ${teamCol}
             <td>${escapeSecurityHtml(b.name)}</td>
             <td>${escapeSecurityHtml(b.admin)}</td>
-            <td style="text-align: center;">${messages > 0 ? messages.toLocaleString() : "-"}</td>
+            <td style="text-align: center;">${messages.toLocaleString()}</td>
             <td style="text-align: center; font-weight: 600; color: #fb923c;">${phoneCount > 0 ? phoneCount.toLocaleString() : "-"}</td>
             <td style="text-align: center;">${money > 0 ? money.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : "-"}</td>
             <td style="text-align: center; font-weight: 600; color: #34d399;">${branchPercent}</td>
