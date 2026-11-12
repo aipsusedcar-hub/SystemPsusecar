@@ -2806,10 +2806,11 @@ function auditPopupFlow(step, data){
                   <th>เหมือนเดิม</th>
                   <th>รอวันจองใหม่</th>
                   <th>ต้องตรวจสอบ</th>
+                  <th>จัดการ</th>
                 </tr>
               </thead>
               <tbody id="bookingDeliveryImportHistoryBody">
-                <tr><td colspan="8" class="import-history-empty">กำลังโหลดประวัติ...</td></tr>
+                <tr><td colspan="9" class="import-history-empty">กำลังโหลดประวัติ...</td></tr>
               </tbody>
             </table>
           </div>
@@ -10325,7 +10326,7 @@ let endIso = "";
     const token = sessionStorage.getItem("ps_auth_token") || "";
     if (!token) return;
 
-    tbody.innerHTML = '<tr><td colspan="8" class="import-history-empty">⏳ กำลังโหลดประวัติ...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="import-history-empty">⏳ กำลังโหลดประวัติ...</td></tr>';
     try {
       const res = await fetch(BOOKING_IMPORT_GAS_URL, {
         method: "POST",
@@ -10338,7 +10339,7 @@ let endIso = "";
       const data = await res.json();
       const rows = data && data.success && Array.isArray(data.rows) ? data.rows : [];
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="import-history-empty">ยังไม่มีประวัติการนำเข้า</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="import-history-empty">ยังไม่มีประวัติการนำเข้า</td></tr>';
         return;
       }
 
@@ -10351,9 +10352,40 @@ let endIso = "";
         <td style="text-align:center;">${Number(r.unchanged || 0).toLocaleString()}</td>
         <td style="text-align:center;color:#c4b5fd;font-weight:700;">${Number(r.pendingNew || 0).toLocaleString()}</td>
         <td style="text-align:center;color:#f87171;font-weight:700;">${Number(r.review || 0).toLocaleString()}</td>
+        <td style="text-align:center;"><button type="button" class="import-btn-secondary" style="padding:5px 8px;color:#fecaca;border-color:rgba(248,113,113,.55);" onclick="deleteBookingDeliveryImport_(${JSON.stringify(String(r.importedAt || ''))},${JSON.stringify(String(r.sourceFile || ''))})">🗑️ ลบและถอน Master</button></td>
       </tr>`).join("");
     } catch (err) {
-      tbody.innerHTML = '<tr><td colspan="8" class="import-history-empty">ยังโหลดประวัติไม่ได้ — กรุณาตรวจ Apps Script Master V3</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="import-history-empty">ยังโหลดประวัติไม่ได้ — กรุณาตรวจ Apps Script Master V3</td></tr>';
+    }
+  }
+
+  async function deleteBookingDeliveryImport_(importedAt, sourceFile) {
+    if (!sourceFile) return;
+    const confirmed = window.confirm(
+      `ยืนยันลบไฟล์นำเข้า\n${sourceFile}\n\nระบบจะถอนรายการที่ไฟล์นี้เป็นแหล่งข้อมูลล่าสุดออกจาก Master และลบประวัติไฟล์นี้`+
+      `\nรายการที่มีไฟล์ถัดมาอัปเดตแล้วจะไม่ถูกลบ`
+    );
+    if (!confirmed) return;
+
+    const token = sessionStorage.getItem("ps_auth_token") || "";
+    const tbody = document.getElementById("bookingDeliveryImportHistoryBody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="import-history-empty">⏳ กำลังลบและถอนผลกระทบจาก Master...</td></tr>';
+    try {
+      const res = await fetch(BOOKING_IMPORT_GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "deleteBookingDeliveryImport", schemaVersion: 3, token, importedAt, sourceFile }),
+        redirect: "follow",
+        cache: "no-store",
+        referrerPolicy: "no-referrer"
+      });
+      const data = await res.json();
+      if (!data || !data.success) throw new Error(data?.message || "ลบไฟล์นำเข้าไม่สำเร็จ");
+      await loadBookingDeliveryImportHistory();
+      const reportRefreshed = await refreshBookingDeliveryAfterImport_();
+      window.alert(`ลบแล้ว\nMaster ${Number(data.removedMaster || 0).toLocaleString()} รายการ\nPending ${Number(data.removedPending || 0).toLocaleString()} รายการ` + (reportRefreshed ? "\nรีเฟรชรายงานแล้ว" : ""));
+    } catch (err) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="import-history-empty">✖ ${escapeImportHtml(err?.message || "ลบไฟล์นำเข้าไม่สำเร็จ")}</td></tr>`;
     }
   }
 
