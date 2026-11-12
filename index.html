@@ -9566,6 +9566,8 @@ let endIso = "";
         : 'ใช้สำหรับ Snapshot รายวัน <strong>จอง / เซ็นต์ / อนุมัติ / ปล่อย</strong> และอัปเดต Master History แบบสะสม';
     }
 
+    if (selected === "commission") void loadCommissionCloseRevisions("");
+
     // จำโหมดเฉพาะเครื่อง ไม่เกี่ยวกับข้อมูลใน Master
     try {
       sessionStorage.setItem("ps_booking_delivery_import_mode", selected);
@@ -10455,7 +10457,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-11-12.2";
+  const SITE_BUILD_VERSION = "2026-11-12.3";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
