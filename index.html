@@ -2647,10 +2647,11 @@ function auditPopupFlow(step, data){
                   <th>จำนวนรายการ</th>
                   <th>สถานะ</th>
                   <th>นำเข้าเมื่อ</th>
+                  <th>จัดการ</th>
                 </tr>
               </thead>
               <tbody id="commissionCloseRevisionBody">
-                <tr><td colspan="6" class="import-history-empty">ยังไม่มีข้อมูล Revision</td></tr>
+                <tr><td colspan="7" class="import-history-empty">ยังไม่มีข้อมูล Revision</td></tr>
               </tbody>
             </table>
           </div>
@@ -9436,18 +9437,24 @@ let endIso = "";
     const tbody = document.getElementById("commissionCloseRevisionBody");
     if (!tbody) return;
 
+    tbody.onclick = event => {
+      const button = event.target.closest("button[data-delete-commission-revision]");
+      if (!button || !tbody.contains(button)) return;
+      void deleteCommissionCloseRevision_(button.dataset.month || "", button.dataset.revision || "", button.dataset.sourceFile || "");
+    };
+
     const token = sessionStorage.getItem("ps_auth_token") || "";
     if (!token) return;
 
     tbody.innerHTML =
-      '<tr><td colspan="6" class="import-history-empty">⏳ กำลังโหลด Revision...</td></tr>';
+      '<tr><td colspan="7" class="import-history-empty">⏳ กำลังโหลด Revision...</td></tr>';
 
     try {
       const rows = await getCommissionCloseRevisionsJsonp_(month || "");
 
       if (!rows.length) {
         tbody.innerHTML =
-          '<tr><td colspan="6" class="import-history-empty">ยังไม่มี Revision ของเดือนนี้</td></tr>';
+          '<tr><td colspan="7" class="import-history-empty">ยังไม่มี Revision ของเดือนนี้</td></tr>';
         return;
       }
 
@@ -9468,6 +9475,7 @@ let endIso = "";
               : '<span class="badge-month">HISTORY</span>'}
           </td>
           <td>${escapeImportHtml(r.importedAt || "-")}</td>
+          <td style="text-align:center;"><button type="button" data-delete-commission-revision data-month="${escapeImportHtml(r.commissionMonth || "")}" data-revision="${Number(r.revision || 0)}" data-source-file="${escapeImportHtml(r.sourceFile || "")}" class="import-btn-secondary" style="padding:5px 8px;color:#fecaca;border-color:rgba(248,113,113,.55);">🗑️ ลบ Revision</button></td>
         </tr>`).join("");
 
       const latest = rows.find(r => r.active) || rows[0];
@@ -9479,7 +9487,57 @@ let endIso = "";
     } catch (err) {
       const msg = (err && err.message) ? err.message : "โหลด Revision ไม่สำเร็จ";
       tbody.innerHTML =
-        `<tr><td colspan="6" class="import-history-empty">⚠ ${escapeImportHtml(msg)}</td></tr>`;
+        `<tr><td colspan="7" class="import-history-empty">⚠ ${escapeImportHtml(msg)}</td></tr>`;
+    }
+  }
+
+  async function deleteCommissionCloseRevision_(month, revision, sourceFile) {
+    const normalizedMonth = String(month || "").trim();
+    const revisionNumber = Number(revision || 0);
+    const filename = String(sourceFile || "").trim();
+    if (!normalizedMonth || !revisionNumber || !filename) return;
+    const confirmed = window.confirm(
+      `ยืนยันลบไฟล์ปิดค่าคอม ${normalizedMonth} Rev.${revisionNumber}\n${filename}\n\n` +
+      `ระบบจะลบ Revision นี้ออกจากประวัติและสรุปค่าคอม หากเป็นชุดปัจจุบัน ระบบจะย้อนใช้ Revision ก่อนหน้าที่เหลืออยู่\n` +
+      `ข้อมูล Daily Master จะไม่ถูกแก้ไข`
+    );
+    if (!confirmed) return;
+
+    const token = sessionStorage.getItem("ps_auth_token") || "";
+    const tbody = document.getElementById("commissionCloseRevisionBody");
+    if (!token) {
+      window.alert("Session หมดอายุ กรุณาเข้าสู่ระบบใหม่");
+      return;
+    }
+    const button = tbody && Array.from(tbody.querySelectorAll("button[data-delete-commission-revision]"))
+      .find(el => el.dataset.month === normalizedMonth && Number(el.dataset.revision) === revisionNumber && el.dataset.sourceFile === filename);
+    if (button) button.disabled = true;
+    try {
+      await fetch(BOOKING_IMPORT_GAS_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "deleteCommissionCloseRevision", schemaVersion: 1, token, commissionMonth: normalizedMonth, revision: revisionNumber, sourceFile: filename }),
+        cache: "no-store",
+        referrerPolicy: "no-referrer"
+      });
+
+      let remaining = null;
+      for (let attempt = 0; attempt < 15; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        try {
+          remaining = await getCommissionCloseRevisionsJsonp_(normalizedMonth);
+          if (!remaining.some(r => Number(r.revision || 0) === revisionNumber && String(r.sourceFile || "") === filename)) break;
+        } catch (_) {}
+      }
+      if (!remaining || remaining.some(r => Number(r.revision || 0) === revisionNumber && String(r.sourceFile || "") === filename)) {
+        throw new Error("ยังยืนยันการลบจาก Master ไม่ได้ กรุณารีเฟรชแล้วตรวจสถานะอีกครั้ง");
+      }
+      await loadCommissionCloseRevisions(normalizedMonth);
+      window.alert(`ลบ ${normalizedMonth} Rev.${revisionNumber} แล้ว`);
+    } catch (err) {
+      if (button) button.disabled = false;
+      window.alert(err && err.message ? err.message : "ลบ Revision ไม่สำเร็จ");
     }
   }
 
@@ -10397,7 +10455,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-11-12.1";
+  const SITE_BUILD_VERSION = "2026-11-12.2";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
