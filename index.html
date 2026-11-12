@@ -4378,7 +4378,7 @@ let endIso = "";
         // Apps Script รายงานนี้อ่านหลายชีตและตอบกลับจริงราว 16–18 วินาที
         // จึงต้องเผื่อเวลาให้มากกว่าการโหลด GID ปกติ ไม่เช่นนั้นจะแสดง error
         // ทั้งที่ backend กำลังจะตอบข้อมูลกลับมา
-        const data = await fetchGidJsonp_(summaryApiUrl, 60000);
+        const data = await fetchGidJsonp_(summaryApiUrl, 120000);
         if (!data || !data.success) throw new Error(data?.message || "อ่าน Summary Sheets ไม่สำเร็จ");
 
         // Schema ปัจจุบันยืนยันแหล่งยอดปล่อยผ่าน meta.deliverySheet; ข้อความ source
@@ -10323,6 +10323,13 @@ let endIso = "";
   async function loadBookingDeliveryImportHistory() {
     const tbody = document.getElementById("bookingDeliveryImportHistoryBody");
     if (!tbody) return;
+    // Delegate clicks from the history table. Keep file names out of inline JS
+    // attributes so apostrophes/quotes in a filename cannot break the button.
+    tbody.onclick = event => {
+      const button = event.target.closest("button[data-delete-booking-import]");
+      if (!button || !tbody.contains(button)) return;
+      void deleteBookingDeliveryImport_(button.dataset.importedAt || "", button.dataset.sourceFile || "");
+    };
     const token = sessionStorage.getItem("ps_auth_token") || "";
     if (!token) return;
 
@@ -10352,7 +10359,7 @@ let endIso = "";
         <td style="text-align:center;">${Number(r.unchanged || 0).toLocaleString()}</td>
         <td style="text-align:center;color:#c4b5fd;font-weight:700;">${Number(r.pendingNew || 0).toLocaleString()}</td>
         <td style="text-align:center;color:#f87171;font-weight:700;">${Number(r.review || 0).toLocaleString()}</td>
-        <td style="text-align:center;"><button type="button" class="import-btn-secondary" style="padding:5px 8px;color:#fecaca;border-color:rgba(248,113,113,.55);" onclick="deleteBookingDeliveryImport_(${JSON.stringify(String(r.importedAt || ''))},${JSON.stringify(String(r.sourceFile || ''))})">🗑️ ลบและถอน Master</button></td>
+        <td style="text-align:center;"><button type="button" data-delete-booking-import data-imported-at="${escapeImportHtml(r.importedAt || "")}" data-source-file="${escapeImportHtml(r.sourceFile || "")}" class="import-btn-secondary" style="padding:5px 8px;color:#fecaca;border-color:rgba(248,113,113,.55);">🗑️ ลบและถอน Master</button></td>
       </tr>`).join("");
     } catch (err) {
       tbody.innerHTML = '<tr><td colspan="9" class="import-history-empty">ยังโหลดประวัติไม่ได้ — กรุณาตรวจ Apps Script Master V3</td></tr>';
@@ -10390,7 +10397,7 @@ let endIso = "";
   }
 
   // เวอร์ชันกลาง: ทุกหน้าเว็บที่เปิดค้างไว้จะตรวจเวอร์ชันล่าสุดและเปลี่ยนไปใช้ URL ใหม่เอง
-  const SITE_BUILD_VERSION = "2026-10-17.2";
+  const SITE_BUILD_VERSION = "2026-11-12.1";
   let siteUpdateNavigationStarted_ = false;
 
   function useCanonicalSiteUrl_() {
